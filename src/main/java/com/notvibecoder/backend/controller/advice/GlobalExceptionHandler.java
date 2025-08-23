@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.exceptionhandler;
+package com.notvibecoder.backend.controller.advice;
 
 import com.notvibecoder.backend.dto.ErrorResponse;
 import com.notvibecoder.backend.exception.OAuth2AuthenticationProcessingException;
