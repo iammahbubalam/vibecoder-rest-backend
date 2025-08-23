@@ -36,6 +36,7 @@ public class User {
     private String providerId;
 
     private Set<Role> roles;
+    @Builder.Default
     private Boolean enabled = true;
 
     @CreatedDate
