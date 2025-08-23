@@ -8,18 +8,16 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Getter
 public class UserPrincipal implements OAuth2User, UserDetails {
 
-    @Getter
     private final User user;
     private final Map<String, Object> attributes;
 
-    public UserPrincipal(User user, Map<String, Object> attributes) {
+    private UserPrincipal(User user, Map<String, Object> attributes) {
         this.user = user;
         this.attributes = attributes;
     }
@@ -30,6 +28,10 @@ public class UserPrincipal implements OAuth2User, UserDetails {
 
     public String getId() {
         return user.getId();
+    }
+
+    public String getEmail() {
+        return user.getEmail();
     }
 
     @Override
@@ -76,6 +78,6 @@ public class UserPrincipal implements OAuth2User, UserDetails {
 
     @Override
     public String getName() {
-        return user.getEmail();
+        return user.getName();
     }
 }

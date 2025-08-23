@@ -1,15 +1,6 @@
 package com.notvibecoder.backend.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import java.time.Instant;
 
-import java.util.Date;
-
-@Data
-@AllArgsConstructor
-public class ErrorResponse {
-    private int statusCode;
-    private Date timestamp;
-    private String message;
-    private String description;
+public record ErrorResponse(int statusCode, Instant timestamp, String message, String description) {
 }

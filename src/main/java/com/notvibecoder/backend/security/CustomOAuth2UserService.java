@@ -1,4 +1,5 @@
 package com.notvibecoder.backend.security;
+
 import com.notvibecoder.backend.entity.AuthProvider;
 import com.notvibecoder.backend.entity.Role;
 import com.notvibecoder.backend.entity.User;
@@ -13,9 +14,13 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
 import java.util.Optional;
 import java.util.Set;
+
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -24,6 +29,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final UserRepository userRepository;
 
     @Override
+    @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
@@ -34,18 +40,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         }
 
         Optional<User> userOptional = userRepository.findByEmail(oAuth2UserInfo.getEmail());
-        User user;
-        if (userOptional.isPresent()) {
-            user = userOptional.get();
-            AuthProvider provider = AuthProvider.valueOf(registrationId);
-            if (!user.getProvider().equals(provider)) {
-                throw new OAuth2AuthenticationProcessingException("Looks like you're signed up with " +
-                        user.getProvider() + " account. Please use your " + user.getProvider() + " account to login.");
-            }
-            user = updateExistingUser(user, oAuth2UserInfo);
-        } else {
-            user = registerNewUser(registrationId, oAuth2UserInfo);
-        }
+        User user = userOptional
+                .map(existingUser -> updateExistingUser(existingUser, oAuth2UserInfo, registrationId))
+                .orElseGet(() -> registerNewUser(registrationId, oAuth2UserInfo));
 
         return UserPrincipal.create(user, oAuth2User.getAttributes());
     }
@@ -62,7 +59,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         return userRepository.save(user);
     }
 
-    private User updateExistingUser(User existingUser, OAuth2UserInfo oAuth2UserInfo) {
+    private User updateExistingUser(User existingUser, OAuth2UserInfo oAuth2UserInfo, String registrationId) {
+        AuthProvider provider = AuthProvider.valueOf(registrationId);
+        if (!existingUser.getProvider().equals(provider)) {
+            throw new OAuth2AuthenticationProcessingException("Looks like you're signed up with " +
+                    existingUser.getProvider() + " account. Please use your " + existingUser.getProvider() + " account to login.");
+        }
         existingUser.setName(oAuth2UserInfo.getName());
         existingUser.setPictureUrl(oAuth2UserInfo.getImageUrl());
         log.info("Updating existing user: {}", existingUser.getEmail());

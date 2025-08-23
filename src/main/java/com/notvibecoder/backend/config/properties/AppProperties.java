@@ -1,21 +1,15 @@
 package com.notvibecoder.backend.config.properties;
 
-import lombok.Data;
+import jakarta.validation.constraints.NotEmpty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "app")
-@Data
-public class AppProperties {
-    private final Oauth2 oauth2 = new Oauth2();
-    private final Cors cors = new Cors();
-
-    @Data
-    public static class Oauth2 {
-        private String redirectUri;
+@Validated
+public record AppProperties(Oauth2 oauth2, Cors cors) {
+    public record Oauth2(@NotEmpty String redirectUri) {
     }
 
-    @Data
-    public static class Cors {
-        private String[] allowedOrigins;
+    public record Cors(@NotEmpty String[] allowedOrigins) {
     }
 }

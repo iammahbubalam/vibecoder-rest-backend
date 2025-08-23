@@ -1,11 +1,9 @@
 package com.notvibecoder.backend.repository;
 
-import java.util.Optional;
-import java.util.UUID;
-
+import com.notvibecoder.backend.entity.User;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
-import com.notvibecoder.backend.entity.User;
+import java.util.Optional;
 
 public interface UserRepository extends MongoRepository<User, String> {
     Optional<User> findByEmail(String email);
