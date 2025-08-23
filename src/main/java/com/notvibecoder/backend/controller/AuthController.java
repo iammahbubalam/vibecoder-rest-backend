@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,7 +23,8 @@ public class AuthController {
     private final AuthService authService;
     private final RefreshTokenService refreshTokenService;
 
-    @PostMapping("/refresh")
+    @GetMapping("/refresh")
+    // @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refreshToken(@CookieValue(name = "refreshToken", required = false) String requestRefreshToken) {
         if (requestRefreshToken == null) {
             throw new TokenRefreshException("Refresh token is missing.");

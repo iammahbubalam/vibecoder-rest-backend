@@ -2,6 +2,8 @@ package com.notvibecoder.backend.entity;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
@@ -15,6 +17,8 @@ import java.util.Set;
 
 @Document(collection = "users")
 @Data
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 public class User {
     @Id
