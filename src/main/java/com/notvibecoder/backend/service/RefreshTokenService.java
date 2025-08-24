@@ -77,7 +77,7 @@ public class RefreshTokenService {
                 .createdAt(Instant.now())
                 .lastUsed(Instant.now())
                 .build();
-                
+        log.info("User-Agent: {}", deviceFingerprint);
         RefreshToken savedToken = refreshTokenRepository.save(refreshToken);
         
         // ✅ Security audit logging
@@ -162,13 +162,12 @@ public class RefreshTokenService {
     }
     
     private String createDeviceFingerprint(HttpServletRequest request) {
-        StringBuilder fingerprint = new StringBuilder();
-        fingerprint.append(request.getHeader("User-Agent")).append("|");
-        fingerprint.append(request.getHeader("Accept-Language")).append("|");
-        fingerprint.append(request.getHeader("Accept-Encoding")).append("|");
-        fingerprint.append(getClientIp(request));
+        String fingerprint = request.getHeader("User-Agent") + "|" +
+                request.getHeader("Accept-Language") + "|" +
+                request.getHeader("Accept-Encoding") + "|" +
+                getClientIp(request);
         
-        return String.valueOf(fingerprint.toString().hashCode());
+        return String.valueOf(fingerprint.hashCode());
     }
     
     private boolean verifyDeviceBinding(RefreshToken token, HttpServletRequest request) {

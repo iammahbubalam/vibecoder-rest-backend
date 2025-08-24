@@ -32,7 +32,7 @@ public class RefreshToken {
     @Builder.Default
     private boolean isRevoked = false;
     
-    @Indexed(expireAfterSeconds = 0)
+    @Indexed(expireAfter = "0s")
     @Field("expiry_date")
     private Instant expiryDate;
     

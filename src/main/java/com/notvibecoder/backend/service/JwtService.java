@@ -47,7 +47,16 @@ public class JwtService {
     }
     
     public List<String> extractRoles(String token) {
-        return extractClaim(token, claims -> claims.get("roles", List.class));
+        return extractClaim(token, claims -> {
+            Object roles = claims.get("roles");
+            if (roles instanceof List<?>) {
+                return ((List<?>) roles).stream()
+                        .filter(role -> role instanceof String)
+                        .map(role -> (String) role)
+                        .collect(Collectors.toList());
+            }
+            return List.of();
+        });
     }
     
     public String extractUserId(String token) {

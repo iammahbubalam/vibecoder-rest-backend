@@ -1,6 +1,5 @@
 package com.notvibecoder.backend.scheduler;
 
-import com.notvibecoder.backend.repository.BlacklistedTokenRepository;
 import com.notvibecoder.backend.repository.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,8 +14,6 @@ import java.time.Instant;
 public class TokenCleanupScheduler {
 
     private final RefreshTokenRepository refreshTokenRepository;
-    private final BlacklistedTokenRepository blacklistedTokenRepository;
-
     @Scheduled(fixedRate = 3600000) // Every hour
     public void cleanupExpiredTokens() {
         try {
