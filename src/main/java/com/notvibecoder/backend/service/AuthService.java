@@ -24,18 +24,26 @@ public class AuthService {
         return refreshTokenService.findByToken(requestRefreshToken)
                 .map(refreshTokenService::verifyExpiration)
                 .map(oldToken -> {
-                    // Delete old token
-                    refreshTokenService.deleteByUserId(oldToken.getUserId());
-
-                    // Create new refresh token
-                    RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(oldToken.getUserId());
-
-                    // Fetch user and create new access token
+                    // ✅ Enhanced security: verify user is still active
                     User user = userRepository.findById(oldToken.getUserId())
                             .orElseThrow(() -> new TokenRefreshException("User not found for refresh token."));
+                    
+                    // ✅ Check if user account is still enabled
+                    if (!user.getEnabled()) {
+                        refreshTokenService.deleteByUserId(user.getId());
+                        throw new TokenRefreshException("User account is disabled.");
+                    }
+                    
+                    // ✅ Single device: Delete old refresh token (will be only one)
+                    refreshTokenService.deleteByUserId(oldToken.getUserId());
+
+                    // ✅ Single device: Create new refresh token (ensures only one exists)
+                    RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(oldToken.getUserId());
+
+                    // Create new access token with enhanced claims
                     String newAccessToken = jwtService.generateToken(UserPrincipal.create(user, null));
 
-                    log.info("Tokens refreshed successfully for user {}", user.getEmail());
+                    log.info("Single session tokens refreshed successfully for user {}", user.getEmail());
                     return new RotatedTokens(newAccessToken, newRefreshToken.getToken());
                 })
                 .orElseThrow(() -> new TokenRefreshException("Refresh token not found in database."));
@@ -43,12 +51,28 @@ public class AuthService {
 
     @Transactional
     public void logout(String requestRefreshToken) {
+        logout(requestRefreshToken, null);
+    }
+    
+    @Transactional
+    public void logout(String requestRefreshToken, String accessToken) {
+        // ✅ Enhanced: Blacklist the current access token immediately
+        if (accessToken != null) {
+            jwtService.blacklistToken(accessToken, "user_logout");
+            log.info("Access token blacklisted on logout");
+        }
+        
+        // ✅ Single device: Delete the single refresh token
         if (requestRefreshToken != null) {
             refreshTokenService.findByToken(requestRefreshToken)
-                    .ifPresent(token -> refreshTokenService.deleteByUserId(token.getUserId()));
+                    .ifPresent(token -> {
+                        refreshTokenService.deleteByUserId(token.getUserId());
+                        log.info("Single session terminated for user: {}", token.getUserId());
+                    });
         }
+        
+        log.info("User logged out successfully from single device");
     }
 
-    public record RotatedTokens(String accessToken, String refreshToken) {
-    }
+    public record RotatedTokens(String accessToken, String refreshToken) {}
 }

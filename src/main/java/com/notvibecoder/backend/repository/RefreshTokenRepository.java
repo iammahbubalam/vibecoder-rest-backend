@@ -9,17 +9,26 @@ import java.time.Instant;
 import java.util.Optional;
 
 public interface RefreshTokenRepository extends MongoRepository<RefreshToken, String> {
+    
     Optional<RefreshToken> findByToken(String token);
-
+    
+    Optional<RefreshToken> findByUserId(String userId); // ✅ Single session: one token per user
+    
     void deleteByUserId(String userId);
-
+    
     void deleteByExpiryDateBefore(Instant date);
-
+    
     @Query("{ '_id': ?0 }")
-    @Update("{ '$set': { 'revoked': true } }")
+    @Update("{ '$set': { 'isRevoked': true } }")
     int revokeToken(String tokenId);
-
-    @Query("{ 'userId': ?0, 'revoked': false }")
-    @Update("{ '$set': { 'revoked': true } }")
+    
+    @Query("{ 'userId': ?0, 'isRevoked': false }")
+    @Update("{ '$set': { 'isRevoked': true } }")
     int revokeAllByUserId(String userId);
+    
+    // ✅ Single session queries
+    boolean existsByUserId(String userId);
+    
+    @Query("{ 'userId': ?0, 'isRevoked': false }")
+    Optional<RefreshToken> findActiveTokenByUserId(String userId);
 }

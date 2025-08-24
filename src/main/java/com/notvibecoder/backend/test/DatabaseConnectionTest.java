@@ -1,9 +1,6 @@
 package com.notvibecoder.backend.test;
 
-import com.notvibecoder.backend.entity.AuthProvider;
-import com.notvibecoder.backend.entity.Role;
-import com.notvibecoder.backend.entity.User;
-import com.notvibecoder.backend.repository.UserRepository;
+
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +18,8 @@ public class DatabaseConnectionTest implements ApplicationRunner {
 
     @Autowired
     private MongoTemplate mongoTemplate;
-    @Autowired
-    private UserRepository userRepository;
+    // @Autowired
+    // private UserRepository userRepository;
     @Override
     public void run(ApplicationArguments args) throws Exception {
         try {
