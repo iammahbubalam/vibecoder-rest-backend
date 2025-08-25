@@ -29,8 +29,8 @@ public class BlacklistedToken {
     
     @Field("blacklisted_at")
     private Instant blacklistedAt;
-    
-    @Indexed(expireAfterSeconds = 0) // TTL index - auto cleanup
+
+    @Indexed(name = "expires_at_ttl", expireAfter = "0s")
     @Field("expires_at")
     private Instant expiresAt;
 }

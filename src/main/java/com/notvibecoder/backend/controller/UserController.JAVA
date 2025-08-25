@@ -1,3 +1,4 @@
+package com.notvibecoder.backend.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

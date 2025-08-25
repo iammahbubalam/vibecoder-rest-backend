@@ -58,7 +58,8 @@ public class AuthController {
     }
 
 
-    @PostMapping("/logout")
+    @GetMapping("/logout")
+//    @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Map<String, String>>> logout(
             @CookieValue(name = "refreshToken", required = false) String requestRefreshToken,
             HttpServletRequest request) {
