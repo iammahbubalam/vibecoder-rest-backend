@@ -2,7 +2,6 @@ package com.notvibecoder.backend.config;
 
 import com.notvibecoder.backend.config.properties.AppProperties;
 
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
