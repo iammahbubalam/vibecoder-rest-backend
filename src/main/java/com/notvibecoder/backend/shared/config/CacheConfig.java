@@ -29,10 +29,10 @@ public class CacheConfig {
     public CacheManager userCacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager("users");
         cacheManager.setCaffeine(Caffeine.newBuilder()
-            .maximumSize(1000)
-            .expireAfterWrite(Duration.ofMinutes(15))
-            .expireAfterAccess(Duration.ofMinutes(5))
-            .recordStats()
+                .maximumSize(1000)
+                .expireAfterWrite(Duration.ofMinutes(15))
+                .expireAfterAccess(Duration.ofMinutes(5))
+                .recordStats()
         );
         return cacheManager;
     }
@@ -41,18 +41,18 @@ public class CacheConfig {
     public CacheManager tokenCacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager("tokens", "blacklist");
         cacheManager.setCaffeine(Caffeine.newBuilder()
-            .maximumSize(5000)
-            .expireAfterWrite(Duration.ofMinutes(10))
-            .recordStats()
+                .maximumSize(5000)
+                .expireAfterWrite(Duration.ofMinutes(10))
+                .recordStats()
         );
         return cacheManager;
     }
 
     private Caffeine<Object, Object> defaultCaffeineConfig() {
         return Caffeine.newBuilder()
-            .maximumSize(1000)
-            .expireAfterWrite(Duration.ofMinutes(15))
-            .expireAfterAccess(Duration.ofMinutes(5))
-            .recordStats();
+                .maximumSize(1000)
+                .expireAfterWrite(Duration.ofMinutes(15))
+                .expireAfterAccess(Duration.ofMinutes(5))
+                .recordStats();
     }
 }

@@ -43,57 +43,57 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     }
 
     @Override
-protected String determineTargetUrl(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
-    log.info("=== AUTHENTICATION SUCCESS HANDLER CALLED ===");
-    log.info("Authentication type: {}", authentication.getClass().getName());
-    log.info("Principal type: {}", authentication.getPrincipal().getClass().getName());
-    
-    UserPrincipal principal;
-    
-    // Try to cast to UserPrincipal first (from CustomOAuth2UserService)
-    try {
-        principal = (UserPrincipal) authentication.getPrincipal();
-        log.info("Successfully got UserPrincipal for user: {}", principal.getEmail());
-    } catch (ClassCastException e) {
-        // Fallback: principal is OAuth2User, extract email and load from database
-        log.warn("Principal is OAuth2User, not UserPrincipal. Loading user from database.");
-        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        log.info("OAuth2 User Attributes: {}", oAuth2User.getAttributes());
-        String email = oAuth2User.getAttribute("email");
-        log.info("Email: {}", email);
+    protected String determineTargetUrl(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+        log.info("=== AUTHENTICATION SUCCESS HANDLER CALLED ===");
+        log.info("Authentication type: {}", authentication.getClass().getName());
+        log.info("Principal type: {}", authentication.getPrincipal().getClass().getName());
 
-        if (email == null) {
-            log.info("Could not extract email from OAuth2 principal, redirecting to error page.");
-            return UriComponentsBuilder.fromUriString(appProperties.oauth2().redirectUri())
-                    .queryParam("error", "EmailNotFound")
-                    .build().toUriString();
-        }
+        UserPrincipal principal;
 
+        // Try to cast to UserPrincipal first (from CustomOAuth2UserService)
         try {
-            principal = (UserPrincipal) userDetailsService.loadUserByUsername(email);
-        } catch (UsernameNotFoundException ex) {
-            log.info("User not found in database: {}, redirecting to error page.", email);
-            return UriComponentsBuilder.fromUriString(appProperties.oauth2().redirectUri())
-                    .queryParam("error", "UserNotFound")
-                    .build().toUriString();
+            principal = (UserPrincipal) authentication.getPrincipal();
+            log.info("Successfully got UserPrincipal for user: {}", principal.getEmail());
+        } catch (ClassCastException e) {
+            // Fallback: principal is OAuth2User, extract email and load from database
+            log.warn("Principal is OAuth2User, not UserPrincipal. Loading user from database.");
+            OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+            log.info("OAuth2 User Attributes: {}", oAuth2User.getAttributes());
+            String email = oAuth2User.getAttribute("email");
+            log.info("Email: {}", email);
+
+            if (email == null) {
+                log.info("Could not extract email from OAuth2 principal, redirecting to error page.");
+                return UriComponentsBuilder.fromUriString(appProperties.oauth2().redirectUri())
+                        .queryParam("error", "EmailNotFound")
+                        .build().toUriString();
+            }
+
+            try {
+                principal = (UserPrincipal) userDetailsService.loadUserByUsername(email);
+            } catch (UsernameNotFoundException ex) {
+                log.info("User not found in database: {}, redirecting to error page.", email);
+                return UriComponentsBuilder.fromUriString(appProperties.oauth2().redirectUri())
+                        .queryParam("error", "UserNotFound")
+                        .build().toUriString();
+            }
         }
+
+        // Generate Access Token using our UserPrincipal
+        String accessToken = jwtService.generateToken(principal);
+        log.info("JWT Token generated successfully");
+
+        // Create Refresh Token and Cookie
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(principal.getId());
+        ResponseCookie refreshTokenCookie = refreshTokenService.createRefreshTokenCookie(refreshToken.getToken());
+        log.info("Refresh Token created successfully");
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+
+        log.info("Successfully authenticated user {}. Redirecting to frontend with access token.", principal.getEmail());
+
+        // Add access token as a query parameter for the frontend to consume
+        return UriComponentsBuilder.fromUriString(appProperties.oauth2().redirectUri())
+                .queryParam("token", accessToken)
+                .build().toUriString();
     }
-
-    // Generate Access Token using our UserPrincipal
-    String accessToken = jwtService.generateToken(principal);
-    log.info("JWT Token generated successfully");
-    
-    // Create Refresh Token and Cookie
-    RefreshToken refreshToken = refreshTokenService.createRefreshToken(principal.getId());
-    ResponseCookie refreshTokenCookie = refreshTokenService.createRefreshTokenCookie(refreshToken.getToken());
-    log.info("Refresh Token created successfully");
-    response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
-
-    log.info("Successfully authenticated user {}. Redirecting to frontend with access token.", principal.getEmail());
-
-    // Add access token as a query parameter for the frontend to consume
-    return UriComponentsBuilder.fromUriString(appProperties.oauth2().redirectUri())
-            .queryParam("token", accessToken)
-            .build().toUriString();
-}
 }

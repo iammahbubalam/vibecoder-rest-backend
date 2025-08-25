@@ -1,4 +1,5 @@
 package com.notvibecoder.backend.exception;
+
 import lombok.Getter;
 
 import java.util.Map;

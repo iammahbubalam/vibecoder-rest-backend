@@ -1,11 +1,9 @@
 package com.notvibecoder.backend.controller;
 
 import com.notvibecoder.backend.dto.ApiResponse;
-
 import com.notvibecoder.backend.service.AuthService;
 import com.notvibecoder.backend.service.RefreshTokenService;
 import com.notvibecoder.backend.shared.utils.SecurityUtils;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,30 +27,30 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
 
     @GetMapping("/refresh")
-     public ResponseEntity<ApiResponse<Map<String, String>>> refreshToken(
-            @CookieValue(name = "refreshToken", required = false) 
+    public ResponseEntity<ApiResponse<Map<String, String>>> refreshToken(
+            @CookieValue(name = "refreshToken", required = false)
             @NotBlank(message = "Refresh token is required")
             String requestRefreshToken,
             HttpServletRequest request) {
-        
+
         try {
             String clientIp = SecurityUtils.getClientIpAddress(request);
             log.info("Token refresh attempt from IP: {}", clientIp);
-            
+
             var rotatedTokens = authService.refreshTokens(requestRefreshToken);
             var refreshTokenCookie = refreshTokenService.createRefreshTokenCookie(
-                rotatedTokens.refreshToken());
-            
+                    rotatedTokens.refreshToken());
+
             return ResponseEntity.ok()
-                .header("Set-Cookie", refreshTokenCookie.toString())
-                .body(ApiResponse.success("Token refreshed successfully", 
-                    Map.of("accessToken", rotatedTokens.accessToken())));
-                    
+                    .header("Set-Cookie", refreshTokenCookie.toString())
+                    .body(ApiResponse.success("Token refreshed successfully",
+                            Map.of("accessToken", rotatedTokens.accessToken())));
+
         } catch (Exception e) {
-            log.error("Token refresh failed from IP: {} - Error: {}", 
-                SecurityUtils.getClientIpAddress(request), e.getMessage());
+            log.error("Token refresh failed from IP: {} - Error: {}",
+                    SecurityUtils.getClientIpAddress(request), e.getMessage());
             return ResponseEntity.badRequest()
-                .body(ApiResponse.error("Token refresh failed", "TOKEN_REFRESH_ERROR"));
+                    .body(ApiResponse.error("Token refresh failed", "TOKEN_REFRESH_ERROR"));
         }
     }
 
@@ -63,34 +60,34 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Map<String, String>>> logout(
             @CookieValue(name = "refreshToken", required = false) String requestRefreshToken,
             HttpServletRequest request) {
-        
+
         try {
             String accessToken = extractAccessTokenFromRequest(request);
             authService.logout(requestRefreshToken, accessToken);
-            
+
             var logoutCookie = refreshTokenService.createLogoutCookie();
-            
+
             return ResponseEntity.ok()
-                .header("Set-Cookie", logoutCookie.toString())
-                .body(ApiResponse.success("Logged out successfully", 
-                    Map.of("sessionType", "single_device")));
-                    
+                    .header("Set-Cookie", logoutCookie.toString())
+                    .body(ApiResponse.success("Logged out successfully",
+                            Map.of("sessionType", "single_device")));
+
         } catch (Exception e) {
-            log.error("Logout error for IP: {} - {}", 
-                SecurityUtils.getClientIpAddress(request), e.getMessage());
+            log.error("Logout error for IP: {} - {}",
+                    SecurityUtils.getClientIpAddress(request), e.getMessage());
             return ResponseEntity.ok()
-                .body(ApiResponse.success("Logout completed", Map.of()));
+                    .body(ApiResponse.success("Logout completed", Map.of()));
         }
     }
-    
+
     @GetMapping("/validate")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Map<String, Object>>> validateToken() {
         return ResponseEntity.ok(ApiResponse.success(Map.of(
-            "valid", true,
-            "user", SecurityUtils.getCurrentUsername().orElse("unknown"),
-            "sessionType", "single_device",
-            "timestamp", System.currentTimeMillis()
+                "valid", true,
+                "user", SecurityUtils.getCurrentUsername().orElse("unknown"),
+                "sessionType", "single_device",
+                "timestamp", System.currentTimeMillis()
         )));
     }
 
@@ -101,7 +98,7 @@ public class AuthController {
         }
         return (String) request.getAttribute("jwt");
     }
-    
+
     @GetMapping("/session-info")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> getSessionInfo(HttpServletRequest request) {
@@ -113,5 +110,5 @@ public class AuthController {
                 "timestamp", System.currentTimeMillis()
         ));
     }
-        
+
 }

@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Rate Limiting Configuration using Bucket4j with in-memory cache
- * 
+ * <p>
  * This provides rate limiting without Redis dependency.
  * For true distributed rate limiting across multiple instances, Redis would be needed.
  */
@@ -28,11 +28,32 @@ public class RateLimitingConfig {
     }
 
     /**
+     * Rate limit types for different categories of endpoints
+     */
+    public enum RateLimitType {
+        AUTH_ENDPOINTS("Authentication endpoints - login, logout, OAuth2"),
+        TOKEN_REFRESH("Token refresh operations"),
+        USER_PROFILE("User profile operations"),
+        GENERAL_API("General API endpoints"),
+        ADMIN_ENDPOINTS("Administrative endpoints");
+
+        private final String description;
+
+        RateLimitType(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    /**
      * Rate limiting service that manages buckets for different endpoint types
      */
     @Component
     public static class RateLimitService {
-        
+
         // In-memory bucket storage - use Redis for distributed applications
         private final Map<String, LocalBucket> buckets = new ConcurrentHashMap<>();
 
@@ -44,8 +65,8 @@ public class RateLimitingConfig {
                 Bandwidth bandwidth = getBandwidthForType(type);
                 log.debug("Creating rate limit bucket for key: {} with type: {}", key, type);
                 return Bucket.builder()
-                    .addLimit(bandwidth)
-                    .build();
+                        .addLimit(bandwidth)
+                        .build();
             });
         }
 
@@ -55,11 +76,11 @@ public class RateLimitingConfig {
         public boolean isAllowed(String key, RateLimitType type) {
             LocalBucket bucket = createBucket(key, type);
             boolean allowed = bucket.tryConsume(1);
-            
+
             if (!allowed) {
                 log.warn("Rate limit exceeded for key: {} with type: {}", key, type);
             }
-            
+
             return allowed;
         }
 
@@ -106,62 +127,41 @@ public class RateLimitingConfig {
          */
         private Bandwidth getBandwidthForType(RateLimitType type) {
             return switch (type) {
-                case AUTH_ENDPOINTS -> 
+                case AUTH_ENDPOINTS ->
                     // 20 requests per minute for authentication endpoints
-                    Bandwidth.builder()
-                        .capacity(20)
-                        .refillIntervally(20, Duration.ofMinutes(1))
-                        .build();
-                    
-                case TOKEN_REFRESH -> 
+                        Bandwidth.builder()
+                                .capacity(20)
+                                .refillIntervally(20, Duration.ofMinutes(1))
+                                .build();
+
+                case TOKEN_REFRESH ->
                     // 10 token refresh requests per minute (more restrictive)
-                    Bandwidth.builder()
-                        .capacity(10)
-                        .refillIntervally(10, Duration.ofMinutes(1))
-                        .build();
-                    
-                case USER_PROFILE -> 
+                        Bandwidth.builder()
+                                .capacity(10)
+                                .refillIntervally(10, Duration.ofMinutes(1))
+                                .build();
+
+                case USER_PROFILE ->
                     // 100 requests per minute for user profile operations
-                    Bandwidth.builder()
-                        .capacity(100)
-                        .refillIntervally(100, Duration.ofMinutes(1))
-                        .build();
-                    
-                case GENERAL_API -> 
+                        Bandwidth.builder()
+                                .capacity(100)
+                                .refillIntervally(100, Duration.ofMinutes(1))
+                                .build();
+
+                case GENERAL_API ->
                     // 200 requests per minute for general API calls
-                    Bandwidth.builder()
-                        .capacity(200)
-                        .refillIntervally(200, Duration.ofMinutes(1))
-                        .build();
-                    
+                        Bandwidth.builder()
+                                .capacity(200)
+                                .refillIntervally(200, Duration.ofMinutes(1))
+                                .build();
+
                 case ADMIN_ENDPOINTS ->
                     // 50 requests per minute for admin operations
-                    Bandwidth.builder()
-                        .capacity(50)
-                        .refillIntervally(50, Duration.ofMinutes(1))
-                        .build();
+                        Bandwidth.builder()
+                                .capacity(50)
+                                .refillIntervally(50, Duration.ofMinutes(1))
+                                .build();
             };
-        }
-    }
-
-    /**
-     * Rate limit types for different categories of endpoints
-     */
-    public enum RateLimitType {
-        AUTH_ENDPOINTS("Authentication endpoints - login, logout, OAuth2"),
-        TOKEN_REFRESH("Token refresh operations"),
-        USER_PROFILE("User profile operations"),
-        GENERAL_API("General API endpoints"),
-        ADMIN_ENDPOINTS("Administrative endpoints");
-
-        private final String description;
-
-        RateLimitType(String description) {
-            this.description = description;
-        }
-
-        public String getDescription() {
-            return description;
         }
     }
 }

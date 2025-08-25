@@ -14,17 +14,18 @@ import java.time.Instant;
 public class TokenCleanupScheduler {
 
     private final RefreshTokenRepository refreshTokenRepository;
+
     @Scheduled(fixedRate = 3600000) // Every hour
     public void cleanupExpiredTokens() {
         try {
             Instant now = Instant.now();
-            
+
             // ✅ Clean up expired refresh tokens (single device - should be minimal)
             refreshTokenRepository.deleteByExpiryDateBefore(now);
-            
+
             // ✅ MongoDB TTL will handle blacklisted tokens automatically
             log.debug("Single device token cleanup completed successfully");
-            
+
         } catch (Exception e) {
             log.error("Error during single device token cleanup: {}", e.getMessage());
         }

@@ -18,6 +18,7 @@ public class DatabaseConnectionTest implements ApplicationRunner {
 
     @Autowired
     private MongoTemplate mongoTemplate;
+
     // @Autowired
     // private UserRepository userRepository;
     @Override

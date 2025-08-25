@@ -7,9 +7,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface BlacklistedTokenRepository extends MongoRepository<BlacklistedToken, String> {
-    
+
     boolean existsByJwtId(String jwtId);
-    
+
     void deleteByUserId(String userId);
-    
+
 }

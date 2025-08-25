@@ -26,19 +26,19 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 @CompoundIndexes({
-    @CompoundIndex(name = "email_provider_idx", 
-                   def = "{'email': 1, 'provider': 1}", 
-                   unique = true),
-    @CompoundIndex(name = "provider_providerId_idx", 
-                   def = "{'provider': 1, 'providerId': 1}", 
-                   unique = true),
-    @CompoundIndex(name = "roles_enabled_idx", 
-                   def = "{'roles': 1, 'enabled': 1}"),
-    @CompoundIndex(name = "created_updated_idx", 
-                   def = "{'createdAt': -1, 'updatedAt': -1}")
+        @CompoundIndex(name = "email_provider_idx",
+                def = "{'email': 1, 'provider': 1}",
+                unique = true),
+        @CompoundIndex(name = "provider_providerId_idx",
+                def = "{'provider': 1, 'providerId': 1}",
+                unique = true),
+        @CompoundIndex(name = "roles_enabled_idx",
+                def = "{'roles': 1, 'enabled': 1}"),
+        @CompoundIndex(name = "created_updated_idx",
+                def = "{'createdAt': -1, 'updatedAt': -1}")
 })
 public class User {
-    
+
     @Id
     private String id;
 

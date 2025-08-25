@@ -15,8 +15,8 @@ public final class SecurityUtils {
 
     public static Optional<String> getCurrentUsername() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated() && 
-            !(authentication.getPrincipal() instanceof String)) {
+        if (authentication != null && authentication.isAuthenticated() &&
+                !(authentication.getPrincipal() instanceof String)) {
             return Optional.of(authentication.getName());
         }
         return Optional.empty();
@@ -40,15 +40,15 @@ public final class SecurityUtils {
         if (userAgent == null) {
             return "Unknown";
         }
-        
+
         // Remove potentially dangerous characters and limit length
         return userAgent
-            .replaceAll("[<>\"'&]", "")
-            .substring(0, Math.min(200, userAgent.length()));
+                .replaceAll("[<>\"'&]", "")
+                .substring(0, Math.min(200, userAgent.length()));
     }
 
     public static boolean isValidTokenFormat(String token) {
-        return StringUtils.hasText(token) && 
-               token.matches("^[A-Za-z0-9_-]{86}$");
+        return StringUtils.hasText(token) &&
+                token.matches("^[A-Za-z0-9_-]{86}$");
     }
 }

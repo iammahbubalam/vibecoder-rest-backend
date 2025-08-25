@@ -4,10 +4,8 @@ import com.notvibecoder.backend.security.CustomOAuth2UserService;
 import com.notvibecoder.backend.security.JwtAuthenticationFilter;
 import com.notvibecoder.backend.security.OAuth2AuthenticationSuccessHandler;
 import com.notvibecoder.backend.shared.filter.RateLimitingFilter;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -35,7 +33,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         log.info("=== Configuring Enhanced Security with CSRF Protection ===");
-        
+
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session
@@ -65,7 +63,7 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(endpoint -> endpoint
-                                .baseUri("/oauth2/authorize")
+                                        .baseUri("/oauth2/authorize")
                                 // ✅ Use default session-based storage (works with IF_REQUIRED sessions)
                         )
                         .userInfoEndpoint(userInfo -> userInfo
@@ -79,7 +77,7 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(rateLimitingFilter, OAuth2LoginAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        
+
         log.info("=== Enhanced Security Configuration Completed ===");
         return http.build();
     }

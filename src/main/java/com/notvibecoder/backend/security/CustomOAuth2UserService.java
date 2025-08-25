@@ -58,19 +58,19 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         log.info("=== Processing OAuth2 user ===");
         String registrationId = oAuth2UserRequest.getClientRegistration().getRegistrationId();
         log.info("Registration ID: {}", registrationId);
-        
+
         OAuth2UserInfo oAuth2UserInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(registrationId, oAuth2User.getAttributes());
         log.info("OAuth2UserInfo created for email: {}", oAuth2UserInfo.getEmail());
-        
+
         if (!StringUtils.hasText(oAuth2UserInfo.getEmail())) {
             throw new OAuth2AuthenticationProcessingException("Email not found from OAuth2 provider");
         }
 
         log.info("Checking if user exists in database...");
-        
+
         // ✅ SIMPLIFIED: Find or create user
         User user = findOrCreateUser(oAuth2UserInfo, registrationId);
-        
+
         log.info("Creating UserPrincipal for user: {}", user.getEmail());
         UserPrincipal principal = UserPrincipal.create(user, oAuth2User.getAttributes());
         log.info("=== OAuth2 user processing completed ===");
@@ -80,21 +80,21 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     // ✅ SIMPLIFIED: Just find existing or create new - no updates
     private User findOrCreateUser(OAuth2UserInfo oAuth2UserInfo, String registrationId) {
         String email = oAuth2UserInfo.getEmail();
-        
+
         // Check if user exists
         Optional<User> existingUserOpt = userRepository.findByEmail(email);
-        
+
         if (existingUserOpt.isPresent()) {
             // ✅ SIMPLE: Return existing user as-is
             User existingUser = existingUserOpt.get();
-            log.info("Found existing user, returning as-is: {} (ID: {})", 
+            log.info("Found existing user, returning as-is: {} (ID: {})",
                     existingUser.getEmail(), existingUser.getId());
             return existingUser;
         }
-        
+
         // ✅ CREATE new user only if doesn't exist
         log.info("User not found, creating new user: {}", email);
-        
+
         try {
             User newUser = User.builder()
                     .email(email)
@@ -107,17 +107,17 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     .updatedAt(Instant.now())
                     .build();
             // Don't set ID - let MongoDB auto-generate
-            
+
             User savedUser = userRepository.save(newUser);
-            log.info("Successfully created new user: {} (ID: {})", 
+            log.info("Successfully created new user: {} (ID: {})",
                     savedUser.getEmail(), savedUser.getId());
             return savedUser;
-            
+
         } catch (DuplicateKeyException e) {
             log.warn("Duplicate key error during user creation, trying to find existing user: {}", email);
             // Race condition: another thread created the user
             return userRepository.findByEmail(email).orElseThrow(
-                () -> new OAuth2AuthenticationProcessingException("Failed to handle duplicate user", e)
+                    () -> new OAuth2AuthenticationProcessingException("Failed to handle duplicate user", e)
             );
         } catch (Exception e) {
             log.error("Failed to create new user: {}", email, e);

@@ -1,14 +1,18 @@
 # 🚀 Vibecoder REST Backend - Senior SWE Code Review & Comprehensive Fixes
 
-A **Spring Boot 3.5.4** course selling platform backend with **OAuth2 + JWT authentication**. This document provides a comprehensive **senior software engineer review** of the entire codebase with detailed fixes and improvements.
+A **Spring Boot 3.5.4** course selling platform backend with **OAuth2 + JWT authentication**. This document provides a
+comprehensive **senior software engineer review** of the entire codebase with detailed fixes and improvements.
 
 ---
 
 ## 📋 **Executive Summary**
 
-After a thorough line-by-line review of your entire codebase, I've identified **50+ critical issues** across security, architecture, performance, and code quality. Your OAuth2 implementation has potential but requires significant hardening for production use.
+After a thorough line-by-line review of your entire codebase, I've identified **50+ critical issues** across security,
+architecture, performance, and code quality. Your OAuth2 implementation has potential but requires significant hardening
+for production use.
 
 ### **🚨 Severity Breakdown:**
+
 - **🔥 Critical Security Issues**: 8 (Fix Immediately!)
 - **⚠️ Major Architectural Problems**: 12
 - **🐛 Code Quality Issues**: 15
@@ -23,6 +27,7 @@ After a thorough line-by-line review of your entire codebase, I've identified **
 ### 1. **🚨 EXPOSED CREDENTIALS IN SOURCE CODE**
 
 **❌ Current Security Breach:**
+
 ```properties
 # application.properties - PUBLICLY EXPOSED!
 spring.security.oauth2.client.registration.google.client-secret=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
@@ -31,20 +36,27 @@ jwt.secret=YourSecureJwtSecretKeyThatIsAtLeast256BitsLongForHS256Algorithm
 ```
 
 **� Why This Is Critical:**
-Your `application.properties` file contains hardcoded secrets that are visible to anyone with repository access. This violates the fundamental security principle of "secrets separation" and exposes your entire application to malicious actors. When committed to version control, these secrets become permanently accessible in git history, even if you delete them later. This is the #1 security vulnerability in modern applications and can lead to complete system compromise.
+Your `application.properties` file contains hardcoded secrets that are visible to anyone with repository access. This
+violates the fundamental security principle of "secrets separation" and exposes your entire application to malicious
+actors. When committed to version control, these secrets become permanently accessible in git history, even if you
+delete them later. This is the #1 security vulnerability in modern applications and can lead to complete system
+compromise.
 
 **📍 Where The Problem Exists:**
-The issue is in your `src/main/resources/application.properties` file where sensitive credentials are directly embedded as plain text values instead of being referenced as environment variables.
+The issue is in your `src/main/resources/application.properties` file where sensitive credentials are directly embedded
+as plain text values instead of being referenced as environment variables.
 
 **�💥 Impact:** Anyone with repository access can:
+
 - Access your MongoDB database
-- Impersonate Google OAuth2 applications  
+- Impersonate Google OAuth2 applications
 - Forge JWT tokens
 - Steal user data
 
 **✅ Immediate Fix:**
 
 1. **Rotate ALL compromised secrets NOW:**
+
 ```bash
 # 1. Change MongoDB password immediately
 # 2. Regenerate Google OAuth2 client secret
@@ -52,6 +64,7 @@ The issue is in your `src/main/resources/application.properties` file where sens
 ```
 
 2. **Create secure configuration:**
+
 ```properties
 # application.properties (SECURE VERSION)
 spring.application.name=vibecoder-rest-backend
@@ -87,6 +100,7 @@ management.endpoints.web.base-path=/actuator
 ```
 
 3. **Create secure `.env` file:**
+
 ```bash
 # .env (NEVER commit this file!)
 MONGODB_URI=mongodb+srv://your_new_user:your_new_password@cluster0.4zybv1a.mongodb.net/notvibecoder?retryWrites=true&w=majority&appName=Cluster0
@@ -101,6 +115,7 @@ SSL_ENABLED=true
 ```
 
 4. **Secure `.gitignore`:**
+
 ```gitignore
 # Security - NEVER commit these
 .env
@@ -117,20 +132,27 @@ secrets/
 ### 2. **🛡️ WEAK JWT IMPLEMENTATION**
 
 **❌ Current Problems:**
+
 - No JWT rotation policy
 - Weak secret (predictable)
 - No token blacklisting
 - Missing security headers
 
 **🔍 Why This Matters:**
-Your current JWT implementation uses a predictable, hardcoded secret which makes tokens vulnerable to brute-force attacks. Without token rotation and blacklisting, compromised tokens remain valid until expiration, creating a security window for attackers. JWT tokens are the primary authentication mechanism in your application, so weaknesses here compromise your entire security model. Industry standards require cryptographically secure secrets, proper token lifecycle management, and additional security claims for robust authentication.
+Your current JWT implementation uses a predictable, hardcoded secret which makes tokens vulnerable to brute-force
+attacks. Without token rotation and blacklisting, compromised tokens remain valid until expiration, creating a security
+window for attackers. JWT tokens are the primary authentication mechanism in your application, so weaknesses here
+compromise your entire security model. Industry standards require cryptographically secure secrets, proper token
+lifecycle management, and additional security claims for robust authentication.
 
 **📍 Where The Issues Are:**
-The problems exist in your `JwtService.java` class where token generation lacks proper security measures, and in your application configuration where JWT secret management is insufficient.
+The problems exist in your `JwtService.java` class where token generation lacks proper security measures, and in your
+application configuration where JWT secret management is insufficient.
 
 **✅ Enhanced JWT Security:**
 
 Create `src/main/java/com/notvibecoder/backend/security/JwtSecurityConfig.java`:
+
 ```java
 package com.notvibecoder.backend.security;
 
@@ -150,6 +172,7 @@ public class JwtSecurityConfig {
 ```
 
 Update `JwtService.java` with enhanced security:
+
 ```java
 // Add these methods to JwtService.java
 private static final String ISSUER = "vibecoder-backend";
@@ -188,20 +211,27 @@ private boolean isValidAudience(String token) {
 ### 3. **🔐 INSECURE OAUTH2 IMPLEMENTATION**
 
 **❌ Current Issues:**
+
 - Missing CSRF protection
 - No state parameter validation
 - Overly permissive CORS
 - Token exposed in URL
 
 **🔍 Why OAuth2 Security Is Critical:**
-OAuth2 is your application's front door for user authentication, and current implementation has several attack vectors. Missing CSRF protection allows cross-site request forgery attacks where malicious sites can initiate OAuth2 flows on behalf of users. Lack of state parameter validation opens doors to authorization code interception attacks. Permissive CORS settings allow unauthorized domains to make requests to your authentication endpoints, potentially stealing user credentials or tokens.
+OAuth2 is your application's front door for user authentication, and current implementation has several attack vectors.
+Missing CSRF protection allows cross-site request forgery attacks where malicious sites can initiate OAuth2 flows on
+behalf of users. Lack of state parameter validation opens doors to authorization code interception attacks. Permissive
+CORS settings allow unauthorized domains to make requests to your authentication endpoints, potentially stealing user
+credentials or tokens.
 
 **📍 Where Security Gaps Exist:**
-The vulnerabilities are in your `SecurityConfig.java` where OAuth2 configuration lacks proper security constraints, and in your OAuth2 success handler where tokens are exposed in URL parameters rather than secure cookies.
+The vulnerabilities are in your `SecurityConfig.java` where OAuth2 configuration lacks proper security constraints, and
+in your OAuth2 success handler where tokens are exposed in URL parameters rather than secure cookies.
 
 **✅ Secure OAuth2 Implementation:**
 
 Update `SecurityConfig.java`:
+
 ```java
 @Configuration
 @EnableWebSecurity
@@ -284,14 +314,19 @@ public class SecurityConfig {
 Cookies lack security attributes.
 
 **🔍 Why Cookie Security Matters:**
-Your refresh tokens are stored in HTTP cookies, but without proper security attributes, they're vulnerable to XSS attacks, CSRF attacks, and man-in-the-middle interception. Cookies without `HttpOnly` flag can be accessed by JavaScript, making them vulnerable to script injection attacks. Missing `Secure` flag allows transmission over unencrypted connections, while absent `SameSite` attribute enables CSRF attacks from malicious third-party sites.
+Your refresh tokens are stored in HTTP cookies, but without proper security attributes, they're vulnerable to XSS
+attacks, CSRF attacks, and man-in-the-middle interception. Cookies without `HttpOnly` flag can be accessed by
+JavaScript, making them vulnerable to script injection attacks. Missing `Secure` flag allows transmission over
+unencrypted connections, while absent `SameSite` attribute enables CSRF attacks from malicious third-party sites.
 
 **📍 Where Cookie Issues Exist:**
-The problem is in your `RefreshTokenService.java` where cookie creation methods don't include essential security attributes that modern browsers expect for secure authentication cookies.
+The problem is in your `RefreshTokenService.java` where cookie creation methods don't include essential security
+attributes that modern browsers expect for secure authentication cookies.
 
 **✅ Secure Cookie Implementation:**
 
 Update `RefreshTokenService.java`:
+
 ```java
 public ResponseCookie createRefreshTokenCookie(String refreshToken) {
     return ResponseCookie.from("refreshToken", refreshToken)
@@ -318,14 +353,20 @@ public ResponseCookie createLogoutCookie() {
 ### 5. **💾 MISSING APPLICATION-LEVEL ENCRYPTION**
 
 **🔍 Why Data Encryption Is Essential:**
-While your database connection uses encryption in transit, sensitive user data stored in your MongoDB database lacks encryption at rest within your application layer. This means if your database is compromised or if administrators gain access, sensitive information like user profiles, authentication tokens, and personal data are stored in plain text. Application-level encryption adds an additional security layer, ensuring that even with database access, sensitive data remains protected through cryptographic controls your application manages.
+While your database connection uses encryption in transit, sensitive user data stored in your MongoDB database lacks
+encryption at rest within your application layer. This means if your database is compromised or if administrators gain
+access, sensitive information like user profiles, authentication tokens, and personal data are stored in plain text.
+Application-level encryption adds an additional security layer, ensuring that even with database access, sensitive data
+remains protected through cryptographic controls your application manages.
 
 **📍 Where Encryption Should Be Applied:**
-You need to implement encryption in your entity classes for sensitive fields like user email addresses, personal information, and any PII data before it gets stored to MongoDB through your repository layer.
+You need to implement encryption in your entity classes for sensitive fields like user email addresses, personal
+information, and any PII data before it gets stored to MongoDB through your repository layer.
 
 **✅ Add Data Encryption:**
 
 Create `src/main/java/com/notvibecoder/backend/security/EncryptionService.java`:
+
 ```java
 package com.notvibecoder.backend.security;
 
@@ -382,14 +423,20 @@ public class EncryptionService {
 Missing `@EnableScheduling` - Token cleanup won't work.
 
 **🔍 Why @EnableScheduling Is Critical:**
-Your application includes a `TokenCleanupScheduler` class that's designed to automatically remove expired refresh tokens from your database, but without the `@EnableScheduling` annotation on your main application class, Spring Boot will not recognize or execute any scheduled methods. This means expired tokens will accumulate indefinitely in your database, creating security risks (old tokens might be exploitable) and performance issues (database bloat). The scheduler is essential for maintaining a clean authentication state and preventing storage overflow.
+Your application includes a `TokenCleanupScheduler` class that's designed to automatically remove expired refresh tokens
+from your database, but without the `@EnableScheduling` annotation on your main application class, Spring Boot will not
+recognize or execute any scheduled methods. This means expired tokens will accumulate indefinitely in your database,
+creating security risks (old tokens might be exploitable) and performance issues (database bloat). The scheduler is
+essential for maintaining a clean authentication state and preventing storage overflow.
 
 **📍 Where The Annotation Is Missing:**
-The `@EnableScheduling` annotation needs to be added to your main `VibecoderRestBackendApplication.java` class alongside your existing annotations to activate Spring's scheduling capabilities.
+The `@EnableScheduling` annotation needs to be added to your main `VibecoderRestBackendApplication.java` class alongside
+your existing annotations to activate Spring's scheduling capabilities.
 
 **✅ Fix Main Application Class:**
 
 Update `VibecoderRestBackendApplication.java`:
+
 ```java
 package com.notvibecoder.backend;
 
@@ -422,20 +469,28 @@ public class VibecoderRestBackendApplication {
 ### 2. **🗄️ POOR DATABASE DESIGN**
 
 **❌ Current Issues:**
+
 - No database indexes
 - Missing validation
 - No audit trail
 - Inefficient queries
 
 **🔍 Why Database Optimization Is Crucial:**
-Your MongoDB collections lack proper indexing, which means every query performs a full collection scan - extremely inefficient for production workloads. Without compound indexes on frequently queried fields like email+provider combinations, your authentication flows will become progressively slower as your user base grows. Missing validation constraints allow invalid data to enter your database, potentially causing runtime errors. The absence of audit trails (like created/updated timestamps and versioning) makes debugging issues and tracking data changes nearly impossible in production environments.
+Your MongoDB collections lack proper indexing, which means every query performs a full collection scan - extremely
+inefficient for production workloads. Without compound indexes on frequently queried fields like email+provider
+combinations, your authentication flows will become progressively slower as your user base grows. Missing validation
+constraints allow invalid data to enter your database, potentially causing runtime errors. The absence of audit trails (
+like created/updated timestamps and versioning) makes debugging issues and tracking data changes nearly impossible in
+production environments.
 
 **📍 Where Database Issues Exist:**
-The problems are in your entity classes (`User.java` and `RefreshToken.java`) where MongoDB-specific annotations for indexing and validation are missing, and in your overall data access patterns.
+The problems are in your entity classes (`User.java` and `RefreshToken.java`) where MongoDB-specific annotations for
+indexing and validation are missing, and in your overall data access patterns.
 
 **✅ Enhanced Entity Design:**
 
 Update `User.java`:
+
 ```java
 package com.notvibecoder.backend.entity;
 
@@ -519,6 +574,7 @@ public class User {
 ```
 
 Update `RefreshToken.java`:
+
 ```java
 package com.notvibecoder.backend.entity;
 
@@ -579,14 +635,20 @@ public class RefreshToken {
 Services are tightly coupled and lack interfaces.
 
 **🔍 Why Service Abstraction Matters:**
-Your current service classes (`AuthService`, `RefreshTokenService`) are concrete implementations directly injected into controllers, creating tight coupling that makes unit testing difficult and future refactoring problematic. Without interfaces, you cannot easily mock dependencies for testing, swap implementations for different environments, or follow SOLID principles. This architectural flaw makes your codebase rigid and harder to maintain as complexity grows. Interface-based design enables dependency inversion, making your application more modular and testable.
+Your current service classes (`AuthService`, `RefreshTokenService`) are concrete implementations directly injected into
+controllers, creating tight coupling that makes unit testing difficult and future refactoring problematic. Without
+interfaces, you cannot easily mock dependencies for testing, swap implementations for different environments, or follow
+SOLID principles. This architectural flaw makes your codebase rigid and harder to maintain as complexity grows.
+Interface-based design enables dependency inversion, making your application more modular and testable.
 
 **📍 Where Tight Coupling Exists:**
-The issue is throughout your service layer where concrete classes are directly referenced in dependency injection rather than programming against interfaces, particularly in your `AuthController` and other service interdependencies.
+The issue is throughout your service layer where concrete classes are directly referenced in dependency injection rather
+than programming against interfaces, particularly in your `AuthController` and other service interdependencies.
 
 **✅ Create Service Interfaces:**
 
 Create `src/main/java/com/notvibecoder/backend/service/interfaces/AuthServiceInterface.java`:
+
 ```java
 package com.notvibecoder.backend.service.interfaces;
 
@@ -601,6 +663,7 @@ public interface AuthServiceInterface {
 ```
 
 Create `src/main/java/com/notvibecoder/backend/service/interfaces/UserServiceInterface.java`:
+
 ```java
 package com.notvibecoder.backend.service.interfaces;
 
@@ -619,6 +682,7 @@ public interface UserServiceInterface {
 ```
 
 Update `AuthService.java` to implement interface:
+
 ```java
 @Service
 @RequiredArgsConstructor
@@ -700,14 +764,20 @@ public class AuthService implements AuthServiceInterface {
 No caching strategy - every request hits the database.
 
 **🔍 Why Caching Is Performance-Critical:**
-Your application currently executes database queries for every user lookup, JWT validation, and authentication check, creating unnecessary load on MongoDB and introducing latency bottlenecks. Without caching, your authentication flow becomes a performance chokepoint as user base grows. Each login attempt triggers multiple database roundtrips that could be avoided with proper caching. Redis-based distributed caching enables horizontal scaling while local caching (Caffeine) provides ultra-fast access for frequently-used data like user profiles and token validation.
+Your application currently executes database queries for every user lookup, JWT validation, and authentication check,
+creating unnecessary load on MongoDB and introducing latency bottlenecks. Without caching, your authentication flow
+becomes a performance chokepoint as user base grows. Each login attempt triggers multiple database roundtrips that could
+be avoided with proper caching. Redis-based distributed caching enables horizontal scaling while local caching (
+Caffeine) provides ultra-fast access for frequently-used data like user profiles and token validation.
 
 **📍 Where Caching Should Be Implemented:**
-Caching needs to be added to your `CustomUserDetailsService` for user lookups, `JwtService` for token validation, and throughout your authentication flow where repeated database access occurs.
+Caching needs to be added to your `CustomUserDetailsService` for user lookups, `JwtService` for token validation, and
+throughout your authentication flow where repeated database access occurs.
 
 **✅ Add Redis Caching:**
 
 Add to `pom.xml`:
+
 ```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
@@ -720,6 +790,7 @@ Add to `pom.xml`:
 ```
 
 Create `src/main/java/com/notvibecoder/backend/config/CacheConfig.java`:
+
 ```java
 package com.notvibecoder.backend.config;
 
@@ -768,6 +839,7 @@ public class CacheConfig {
 ```
 
 Update `CustomUserDetailsService.java` with caching:
+
 ```java
 @Service
 @RequiredArgsConstructor
@@ -796,14 +868,20 @@ public class CustomUserDetailsService implements UserDetailsService {
 ### 5. **🛡️ ADD RATE LIMITING**
 
 **🔍 Why Rate Limiting Is Security-Essential:**
-Your authentication endpoints are currently unprotected against brute-force attacks, allowing unlimited login attempts from malicious actors. Without rate limiting, attackers can overwhelm your OAuth2 endpoints, attempt credential stuffing attacks, or perform denial-of-service attacks against your authentication system. Rate limiting protects your application from abuse while ensuring legitimate users maintain access. This is especially critical for authentication endpoints where failed attempts should be throttled to prevent account compromise.
+Your authentication endpoints are currently unprotected against brute-force attacks, allowing unlimited login attempts
+from malicious actors. Without rate limiting, attackers can overwhelm your OAuth2 endpoints, attempt credential stuffing
+attacks, or perform denial-of-service attacks against your authentication system. Rate limiting protects your
+application from abuse while ensuring legitimate users maintain access. This is especially critical for authentication
+endpoints where failed attempts should be throttled to prevent account compromise.
 
 **📍 Where Rate Limiting Should Be Applied:**
-Rate limiting needs to be implemented as a filter that intercepts requests before they reach your authentication controllers, specifically protecting `/api/v1/auth/**` and `/oauth2/**` endpoints.
+Rate limiting needs to be implemented as a filter that intercepts requests before they reach your authentication
+controllers, specifically protecting `/api/v1/auth/**` and `/oauth2/**` endpoints.
 
 **✅ Implement Rate Limiting:**
 
 Add to `pom.xml`:
+
 ```xml
 <dependency>
     <groupId>com.github.vladimir-bukhtoyarov</groupId>
@@ -818,6 +896,7 @@ Add to `pom.xml`:
 ```
 
 Create `src/main/java/com/notvibecoder/backend/security/RateLimitingFilter.java`:
+
 ```java
 package com.notvibecoder.backend.security;
 
@@ -882,14 +961,20 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 ### 6. **📝 ADD COMPREHENSIVE LOGGING**
 
 **🔍 Why Structured Logging Is Operational-Critical:**
-Your current logging lacks structure and context, making production debugging extremely difficult when issues arise. Without proper log levels, correlation IDs, and structured formats, troubleshooting authentication failures, performance issues, or security incidents becomes nearly impossible. Production applications require comprehensive logging for monitoring, alerting, and post-incident analysis. Structured logging enables log aggregation tools like ELK stack to provide meaningful insights into application behavior and user flows.
+Your current logging lacks structure and context, making production debugging extremely difficult when issues arise.
+Without proper log levels, correlation IDs, and structured formats, troubleshooting authentication failures, performance
+issues, or security incidents becomes nearly impossible. Production applications require comprehensive logging for
+monitoring, alerting, and post-incident analysis. Structured logging enables log aggregation tools like ELK stack to
+provide meaningful insights into application behavior and user flows.
 
 **📍 Where Logging Improvements Are Needed:**
-Enhanced logging configuration should be implemented through `logback-spring.xml` with different profiles for development and production environments, plus additional context in your service layers.
+Enhanced logging configuration should be implemented through `logback-spring.xml` with different profiles for
+development and production environments, plus additional context in your service layers.
 
 **✅ Enhanced Logging Configuration:**
 
 Create `src/main/resources/logback-spring.xml`:
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
@@ -975,14 +1060,20 @@ Create `src/main/resources/logback-spring.xml`:
 Generic exception handling without proper logging or user feedback.
 
 **🔍 Why Robust Exception Handling Is Critical:**
-Your current global exception handler lacks specificity and context, making debugging production issues extremely difficult. When authentication failures occur, generic error responses provide no insight into root causes, while missing error correlation IDs make tracking issues across distributed systems impossible. Poor exception handling also creates security vulnerabilities by potentially exposing sensitive system information in error messages. Proper exception handling should provide meaningful feedback to clients while maintaining security and operational visibility.
+Your current global exception handler lacks specificity and context, making debugging production issues extremely
+difficult. When authentication failures occur, generic error responses provide no insight into root causes, while
+missing error correlation IDs make tracking issues across distributed systems impossible. Poor exception handling also
+creates security vulnerabilities by potentially exposing sensitive system information in error messages. Proper
+exception handling should provide meaningful feedback to clients while maintaining security and operational visibility.
 
 **📍 Where Exception Handling Needs Improvement:**
-The issues are in your `GlobalExceptionHandler.java` where different exception types aren't properly categorized, and throughout your service layer where exceptions lack sufficient context for debugging.
+The issues are in your `GlobalExceptionHandler.java` where different exception types aren't properly categorized, and
+throughout your service layer where exceptions lack sufficient context for debugging.
 
 **✅ Enhanced Global Exception Handler:**
 
 Update `GlobalExceptionHandler.java`:
+
 ```java
 package com.notvibecoder.backend.exceptionhandler;
 
@@ -1158,6 +1249,7 @@ public class GlobalExceptionHandler {
 ```
 
 Update `ErrorResponse.java`:
+
 ```java
 package com.notvibecoder.backend.dto;
 
@@ -1180,14 +1272,20 @@ public class ErrorResponse {
 ### 2. **📐 ADD INPUT VALIDATION LAYER**
 
 **🔍 Why Input Validation Is Security-Fundamental:**
-Your application currently lacks comprehensive input validation, allowing potentially malicious or malformed data to reach your business logic and database layer. Without proper validation, your application is vulnerable to injection attacks, data corruption, and runtime exceptions. Input validation serves as the first line of defense against malicious payloads and ensures data integrity throughout your application. Jakarta Bean Validation provides declarative validation that's both secure and maintainable.
+Your application currently lacks comprehensive input validation, allowing potentially malicious or malformed data to
+reach your business logic and database layer. Without proper validation, your application is vulnerable to injection
+attacks, data corruption, and runtime exceptions. Input validation serves as the first line of defense against malicious
+payloads and ensures data integrity throughout your application. Jakarta Bean Validation provides declarative validation
+that's both secure and maintainable.
 
 **📍 Where Validation Should Be Implemented:**
-Validation needs to be added to your DTOs (Data Transfer Objects) that accept user input, particularly in authentication flows and user registration processes.
+Validation needs to be added to your DTOs (Data Transfer Objects) that accept user input, particularly in authentication
+flows and user registration processes.
 
 **✅ Create DTO with Validation:**
 
 Create `src/main/java/com/notvibecoder/backend/dto/UserRegistrationDto.java`:
+
 ```java
 package com.notvibecoder.backend.dto;
 
@@ -1213,6 +1311,7 @@ public class UserRegistrationDto {
 ```
 
 Create `src/main/java/com/notvibecoder/backend/dto/TokenRefreshDto.java`:
+
 ```java
 package com.notvibecoder.backend.dto;
 
@@ -1230,14 +1329,21 @@ public class TokenRefreshDto {
 ### 3. **🧪 ADD COMPREHENSIVE TESTING**
 
 **🔍 Why Testing Is Quality-Assurance Essential:**
-Your application currently lacks unit tests, integration tests, and security tests, making it impossible to verify that authentication flows work correctly or that recent changes don't break existing functionality. Without proper testing, you cannot confidently deploy to production or refactor code for improvements. Testing is especially critical for authentication systems where failures can lock out legitimate users or expose security vulnerabilities. Comprehensive testing enables continuous integration and provides confidence in code quality.
+Your application currently lacks unit tests, integration tests, and security tests, making it impossible to verify that
+authentication flows work correctly or that recent changes don't break existing functionality. Without proper testing,
+you cannot confidently deploy to production or refactor code for improvements. Testing is especially critical for
+authentication systems where failures can lock out legitimate users or expose security vulnerabilities. Comprehensive
+testing enables continuous integration and provides confidence in code quality.
 
 **📍 Where Testing Should Be Implemented:**
-Testing needs to be added across all layers: unit tests for service logic, integration tests for OAuth2 flows, and security tests for authentication edge cases. Your current test structure needs expansion beyond the basic application context test.
+Testing needs to be added across all layers: unit tests for service logic, integration tests for OAuth2 flows, and
+security tests for authentication edge cases. Your current test structure needs expansion beyond the basic application
+context test.
 
 **✅ Create Test Configuration:**
 
 Create `src/test/java/com/notvibecoder/backend/config/TestConfig.java`:
+
 ```java
 package com.notvibecoder.backend.config;
 
@@ -1259,6 +1365,7 @@ public class TestConfig {
 ```
 
 Create `src/test/java/com/notvibecoder/backend/service/AuthServiceTest.java`:
+
 ```java
 package com.notvibecoder.backend.service;
 
@@ -1375,14 +1482,20 @@ class AuthServiceTest {
 ### 1. **🚀 ADD API DOCUMENTATION**
 
 **🔍 Why API Documentation Is Developer-Experience Critical:**
-Your REST API currently lacks documentation, making it difficult for frontend developers to integrate with your authentication endpoints and for future developers to understand API contracts. Without proper API documentation, integration errors increase, development velocity decreases, and maintenance becomes problematic. OpenAPI/Swagger documentation provides interactive testing capabilities and serves as a living contract between your backend and frontend teams, ensuring API consistency and reducing integration issues.
+Your REST API currently lacks documentation, making it difficult for frontend developers to integrate with your
+authentication endpoints and for future developers to understand API contracts. Without proper API documentation,
+integration errors increase, development velocity decreases, and maintenance becomes problematic. OpenAPI/Swagger
+documentation provides interactive testing capabilities and serves as a living contract between your backend and
+frontend teams, ensuring API consistency and reducing integration issues.
 
 **📍 Where Documentation Should Be Added:**
-API documentation needs to be integrated into your Spring Boot application through OpenAPI annotations on your controllers, particularly your `AuthController` where authentication flows are defined.
+API documentation needs to be integrated into your Spring Boot application through OpenAPI annotations on your
+controllers, particularly your `AuthController` where authentication flows are defined.
 
 **✅ Add OpenAPI/Swagger:**
 
 Add to `pom.xml`:
+
 ```xml
 <dependency>
     <groupId>org.springdoc</groupId>
@@ -1392,6 +1505,7 @@ Add to `pom.xml`:
 ```
 
 Create `src/main/java/com/notvibecoder/backend/config/OpenApiConfig.java`:
+
 ```java
 package com.notvibecoder.backend.config;
 
@@ -1439,6 +1553,7 @@ public class OpenApiConfig {
 ```
 
 Update `AuthController.java` with API documentation:
+
 ```java
 package com.notvibecoder.backend.controller;
 
@@ -1494,7 +1609,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refreshToken(
             @Parameter(description = "Refresh token from HTTP-only cookie", hidden = true)
             @CookieValue(name = "refreshToken", required = false) String requestRefreshToken) {
-        
+
         if (requestRefreshToken == null) {
             throw new TokenRefreshException("Refresh token is missing.");
         }
@@ -1521,10 +1636,10 @@ public class AuthController {
     public ResponseEntity<String> logoutUser(
             @Parameter(description = "Refresh token from HTTP-only cookie", hidden = true)
             @CookieValue(name = "refreshToken", required = false) String requestRefreshToken) {
-        
+
         authService.logout(requestRefreshToken);
         ResponseCookie logoutCookie = refreshTokenService.createLogoutCookie();
-        
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, logoutCookie.toString())
                 .body("You've been signed out!");
@@ -1539,7 +1654,7 @@ public class AuthController {
     public ResponseEntity<String> logoutAllDevices(
             @Parameter(description = "User ID from authenticated context")
             @RequestParam String userId) {
-        
+
         authService.logoutAllDevices(userId);
         return ResponseEntity.ok("Logged out from all devices successfully!");
     }
@@ -1549,14 +1664,20 @@ public class AuthController {
 ### 2. **🏃‍♂️ ADD ASYNC PROCESSING**
 
 **🔍 Why Async Processing Is Performance-Critical:**
-Your authentication flow currently executes all operations synchronously, meaning user registration, email notifications, and security logging block the main request thread. This creates poor user experience with slow response times and limits your application's ability to handle concurrent users. Asynchronous processing allows non-critical operations (like sending welcome emails or logging security events) to happen in background threads, dramatically improving response times and system throughput.
+Your authentication flow currently executes all operations synchronously, meaning user registration, email
+notifications, and security logging block the main request thread. This creates poor user experience with slow response
+times and limits your application's ability to handle concurrent users. Asynchronous processing allows non-critical
+operations (like sending welcome emails or logging security events) to happen in background threads, dramatically
+improving response times and system throughput.
 
 **📍 Where Async Processing Should Be Implemented:**
-Async capabilities need to be added to operations like email notifications, audit logging, and other non-blocking tasks that currently delay authentication responses in your service layer.
+Async capabilities need to be added to operations like email notifications, audit logging, and other non-blocking tasks
+that currently delay authentication responses in your service layer.
 
 **✅ Configure Async Processing:**
 
 Create `src/main/java/com/notvibecoder/backend/config/AsyncConfig.java`:
+
 ```java
 package com.notvibecoder.backend.config;
 
@@ -1590,6 +1711,7 @@ public class AsyncConfig {
 ```
 
 Create async notification service:
+
 ```java
 package com.notvibecoder.backend.service;
 
@@ -1628,14 +1750,20 @@ public class NotificationService {
 ### 3. **🔧 ADD TRANSACTION MANAGEMENT**
 
 **🔍 Why Transaction Management Is Data-Integrity Essential:**
-Your application performs multiple database operations during authentication flows (creating users, generating tokens, updating login timestamps) without proper transaction boundaries. If any operation fails mid-process, you could end up with inconsistent data states - like a user record existing without corresponding authentication tokens. MongoDB transactions ensure that related database operations either all succeed or all fail together, maintaining data consistency and preventing orphaned records that could cause authentication issues.
+Your application performs multiple database operations during authentication flows (creating users, generating tokens,
+updating login timestamps) without proper transaction boundaries. If any operation fails mid-process, you could end up
+with inconsistent data states - like a user record existing without corresponding authentication tokens. MongoDB
+transactions ensure that related database operations either all succeed or all fail together, maintaining data
+consistency and preventing orphaned records that could cause authentication issues.
 
 **📍 Where Transaction Management Is Needed:**
-Transaction support needs to be configured at the application level and applied to your service methods that perform multiple database operations, particularly in `AuthService` and `CustomOAuth2UserService`.
+Transaction support needs to be configured at the application level and applied to your service methods that perform
+multiple database operations, particularly in `AuthService` and `CustomOAuth2UserService`.
 
 **✅ Enhanced Transaction Support:**
 
 Create `src/main/java/com/notvibecoder/backend/config/TransactionConfig.java`:
+
 ```java
 package com.notvibecoder.backend.config;
 
@@ -1660,14 +1788,20 @@ public class TransactionConfig {
 ### 4. **🔄 ADD CIRCUIT BREAKER PATTERN**
 
 **🔍 Why Circuit Breaker Is Resilience-Critical:**
-Your application lacks protection against external service failures, meaning if Google's OAuth2 service becomes slow or unavailable, your entire authentication system could become unresponsive. Circuit breaker patterns prevent cascading failures by temporarily stopping requests to failing services and providing fallback responses. This ensures your application remains partially functional even when external dependencies fail, improving overall system resilience and user experience during outages.
+Your application lacks protection against external service failures, meaning if Google's OAuth2 service becomes slow or
+unavailable, your entire authentication system could become unresponsive. Circuit breaker patterns prevent cascading
+failures by temporarily stopping requests to failing services and providing fallback responses. This ensures your
+application remains partially functional even when external dependencies fail, improving overall system resilience and
+user experience during outages.
 
 **📍 Where Circuit Breaker Should Be Applied:**
-Circuit breaker patterns need to be implemented around external service calls, particularly OAuth2 provider communications and any external APIs your application depends on.
+Circuit breaker patterns need to be implemented around external service calls, particularly OAuth2 provider
+communications and any external APIs your application depends on.
 
 **✅ Implement Circuit Breaker:**
 
 Add to `pom.xml`:
+
 ```xml
 <dependency>
     <groupId>io.github.resilience4j</groupId>
@@ -1682,6 +1816,7 @@ Add to `pom.xml`:
 ```
 
 Create `src/main/java/com/notvibecoder/backend/service/ExternalService.java`:
+
 ```java
 package com.notvibecoder.backend.service;
 
@@ -1712,6 +1847,7 @@ public class ExternalService {
 ```
 
 Add to `application.properties`:
+
 ```properties
 # Circuit Breaker Configuration
 resilience4j.circuitbreaker.instances.external-api.failure-rate-threshold=50
@@ -1734,14 +1870,20 @@ resilience4j.retry.instances.external-api.wait-duration=1s
 ### 1. **📈 ADD HEALTH CHECKS**
 
 **🔍 Why Health Monitoring Is Operations-Critical:**
-Your application currently lacks comprehensive health checks, making it impossible for monitoring systems, load balancers, or Kubernetes to determine if your application is truly healthy and ready to serve traffic. Basic health endpoints only check if the application starts, but don't verify that critical dependencies like MongoDB connectivity, Redis availability, or memory usage are within acceptable ranges. Proper health checks enable automated failure detection, graceful degradation, and proactive alerting before users experience issues.
+Your application currently lacks comprehensive health checks, making it impossible for monitoring systems, load
+balancers, or Kubernetes to determine if your application is truly healthy and ready to serve traffic. Basic health
+endpoints only check if the application starts, but don't verify that critical dependencies like MongoDB connectivity,
+Redis availability, or memory usage are within acceptable ranges. Proper health checks enable automated failure
+detection, graceful degradation, and proactive alerting before users experience issues.
 
 **📍 Where Health Checks Should Be Implemented:**
-Health monitoring needs to be configured through Spring Boot Actuator with custom health indicators that check your application's critical dependencies and resource usage patterns.
+Health monitoring needs to be configured through Spring Boot Actuator with custom health indicators that check your
+application's critical dependencies and resource usage patterns.
 
 **✅ Enhanced Health Monitoring:**
 
 Add to `pom.xml`:
+
 ```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
@@ -1754,6 +1896,7 @@ Add to `pom.xml`:
 ```
 
 Create `src/main/java/com/notvibecoder/backend/health/DatabaseHealthIndicator.java`:
+
 ```java
 package com.notvibecoder.backend.health;
 
@@ -1788,6 +1931,7 @@ public class DatabaseHealthIndicator implements HealthIndicator {
 ```
 
 Create `src/main/java/com/notvibecoder/backend/health/CustomHealthIndicator.java`:
+
 ```java
 package com.notvibecoder.backend.health;
 
@@ -1821,6 +1965,7 @@ public class CustomHealthIndicator implements HealthIndicator {
 ```
 
 Update `application.properties` for monitoring:
+
 ```properties
 # Actuator configuration
 management.endpoints.web.exposure.include=health,info,metrics,prometheus,env,loggers
@@ -1848,14 +1993,20 @@ management.endpoint.loggers.roles=ADMIN
 ### 2. **📊 ADD CUSTOM METRICS**
 
 **🔍 Why Application Metrics Are Observability-Essential:**
-Your application lacks instrumentation to measure authentication success rates, token refresh frequency, login attempt patterns, or performance characteristics. Without metrics, you cannot detect authentication issues, identify performance bottlenecks, or understand user behavior patterns. Custom metrics enable proactive monitoring, capacity planning, and security threat detection. Integration with Prometheus and Grafana provides real-time dashboards and alerting capabilities essential for production operations.
+Your application lacks instrumentation to measure authentication success rates, token refresh frequency, login attempt
+patterns, or performance characteristics. Without metrics, you cannot detect authentication issues, identify performance
+bottlenecks, or understand user behavior patterns. Custom metrics enable proactive monitoring, capacity planning, and
+security threat detection. Integration with Prometheus and Grafana provides real-time dashboards and alerting
+capabilities essential for production operations.
 
 **📍 Where Metrics Should Be Implemented:**
-Custom metrics need to be added throughout your authentication flow, particularly in `AuthService` and `JwtService`, to track authentication events, token operations, and performance measurements.
+Custom metrics need to be added throughout your authentication flow, particularly in `AuthService` and `JwtService`, to
+track authentication events, token operations, and performance measurements.
 
 **✅ Implement Custom Metrics:**
 
 Create `src/main/java/com/notvibecoder/backend/metrics/AuthMetrics.java`:
+
 ```java
 package com.notvibecoder.backend.metrics;
 
@@ -1908,6 +2059,7 @@ public class AuthMetrics {
 ```
 
 Update services to use metrics:
+
 ```java
 // In AuthService.java, inject AuthMetrics and add timing
 @Timed(value = "auth.refresh.duration", description = "Time taken to refresh tokens")
@@ -1935,14 +2087,21 @@ public RotatedTokens refreshTokens(String requestRefreshToken) {
 ### 1. **🐳 DOCKER CONFIGURATION**
 
 **🔍 Why Containerization Is Deployment-Essential:**
-Your application currently lacks containerization, making deployment inconsistent across different environments and increasing the complexity of scaling and dependency management. Docker containers ensure your application runs identically in development, testing, and production environments, eliminating "works on my machine" issues. Multi-stage builds optimize image size for production deployment while maintaining build reproducibility. Container orchestration with Docker Compose or Kubernetes enables scalable, resilient deployments with proper service discovery and load balancing.
+Your application currently lacks containerization, making deployment inconsistent across different environments and
+increasing the complexity of scaling and dependency management. Docker containers ensure your application runs
+identically in development, testing, and production environments, eliminating "works on my machine" issues. Multi-stage
+builds optimize image size for production deployment while maintaining build reproducibility. Container orchestration
+with Docker Compose or Kubernetes enables scalable, resilient deployments with proper service discovery and load
+balancing.
 
 **📍 Where Containerization Should Be Implemented:**
-Docker configuration needs to be added at your project root with proper multi-stage builds, security considerations (non-root user), and production optimizations for your Spring Boot application.
+Docker configuration needs to be added at your project root with proper multi-stage builds, security considerations (
+non-root user), and production optimizations for your Spring Boot application.
 
 **✅ Production-Ready Dockerfile:**
 
 Create `Dockerfile`:
+
 ```dockerfile
 # Multi-stage build for optimal image size
 FROM openjdk:21-jdk-slim AS builder
@@ -1989,6 +2148,7 @@ ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
 ```
 
 Create `docker-compose.yml`:
+
 ```yaml
 version: '3.8'
 
@@ -2080,14 +2240,20 @@ networks:
 ### 2. **🔧 CI/CD PIPELINE**
 
 **🔍 Why Automated CI/CD Is Quality-Assurance Critical:**
-Your application lacks automated testing and deployment pipelines, meaning code quality depends entirely on manual verification and deployment processes are error-prone and inconsistent. CI/CD pipelines ensure that every code change is automatically tested for security vulnerabilities, functionality regressions, and integration issues before reaching production. Automated deployment reduces human error, enables rapid rollbacks, and provides consistent deployment across environments. This is essential for maintaining code quality and operational reliability.
+Your application lacks automated testing and deployment pipelines, meaning code quality depends entirely on manual
+verification and deployment processes are error-prone and inconsistent. CI/CD pipelines ensure that every code change is
+automatically tested for security vulnerabilities, functionality regressions, and integration issues before reaching
+production. Automated deployment reduces human error, enables rapid rollbacks, and provides consistent deployment across
+environments. This is essential for maintaining code quality and operational reliability.
 
 **📍 Where CI/CD Should Be Implemented:**
-Automated pipelines should be configured through GitHub Actions (or similar) to test, build, scan for security issues, and deploy your application automatically when code is pushed to main branches.
+Automated pipelines should be configured through GitHub Actions (or similar) to test, build, scan for security issues,
+and deploy your application automatically when code is pushed to main branches.
 
 **✅ GitHub Actions Workflow:**
 
 Create `.github/workflows/ci-cd.yml`:
+
 ```yaml
 name: CI/CD Pipeline
 
@@ -2100,7 +2266,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       mongodb:
         image: mongo:7.0
@@ -2109,114 +2275,120 @@ jobs:
           MONGO_INITDB_ROOT_PASSWORD: admin123
         ports:
           - 27017:27017
-      
+
       redis:
         image: redis:7.2-alpine
         ports:
           - 6379:6379
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up JDK 21
-      uses: actions/setup-java@v4
-      with:
-        java-version: '21'
-        distribution: 'temurin'
-    
-    - name: Cache Maven dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
-    
-    - name: Run tests
-      run: mvn clean test
-      env:
-        MONGODB_URI: mongodb://admin:admin123@localhost:27017/test?authSource=admin
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
-        JWT_SECRET: test-secret-key-for-testing-only-not-for-production-use
-        GOOGLE_CLIENT_ID: test-client-id
-        GOOGLE_CLIENT_SECRET: test-client-secret
+      - uses: actions/checkout@v4
 
-    - name: Generate test report
-      uses: dorny/test-reporter@v1
-      if: success() || failure()
-      with:
-        name: Maven Tests
-        path: target/surefire-reports/*.xml
-        reporter: java-junit
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Run tests
+        run: mvn clean test
+        env:
+          MONGODB_URI: mongodb://admin:admin123@localhost:27017/test?authSource=admin
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_SECRET: test-secret-key-for-testing-only-not-for-production-use
+          GOOGLE_CLIENT_ID: test-client-id
+          GOOGLE_CLIENT_SECRET: test-client-secret
+
+      - name: Generate test report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Maven Tests
+          path: target/surefire-reports/*.xml
+          reporter: java-junit
 
   security-scan:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Run Snyk to check for vulnerabilities
-      uses: snyk/actions/maven@master
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - uses: actions/checkout@v4
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/maven@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
   build-and-push:
-    needs: [test, security-scan]
+    needs: [ test, security-scan ]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Login to DockerHub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-    
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: |
-          vibecoder/backend:latest
-          vibecoder/backend:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            vibecoder/backend:latest
+            vibecoder/backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
-    - name: Deploy to production
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.PROD_HOST }}
-        username: ${{ secrets.PROD_USER }}
-        key: ${{ secrets.PROD_SSH_KEY }}
-        script: |
-          cd /opt/vibecoder
-          docker-compose pull
-          docker-compose up -d --no-deps app
-          docker system prune -f
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/vibecoder
+            docker-compose pull
+            docker-compose up -d --no-deps app
+            docker system prune -f
 ```
 
 ### 3. **🔐 KUBERNETES DEPLOYMENT**
 
 **🔍 Why Kubernetes Is Production-Scaling Essential:**
-Your application needs orchestration capabilities for production deployment, including automatic scaling, rolling updates, service discovery, and resilient infrastructure management. Kubernetes provides enterprise-grade container orchestration that handles load balancing, health checking, secret management, and zero-downtime deployments. Without proper orchestration, manual deployment processes become bottlenecks, scaling is reactive rather than proactive, and infrastructure failures can cause extended outages.
+Your application needs orchestration capabilities for production deployment, including automatic scaling, rolling
+updates, service discovery, and resilient infrastructure management. Kubernetes provides enterprise-grade container
+orchestration that handles load balancing, health checking, secret management, and zero-downtime deployments. Without
+proper orchestration, manual deployment processes become bottlenecks, scaling is reactive rather than proactive, and
+infrastructure failures can cause extended outages.
 
 **📍 Where Kubernetes Configuration Is Needed:**
-Kubernetes manifests should be created to define how your application runs in production clusters, including deployment strategies, resource limits, health checks, and configuration management.
+Kubernetes manifests should be created to define how your application runs in production clusters, including deployment
+strategies, resource limits, health checks, and configuration management.
 
 **✅ Production Kubernetes Manifests:**
 
 Create `k8s/namespace.yaml`:
+
 ```yaml
 apiVersion: v1
 kind: Namespace
@@ -2227,6 +2399,7 @@ metadata:
 ```
 
 Create `k8s/configmap.yaml`:
+
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -2260,6 +2433,7 @@ data:
 ```
 
 Create `k8s/deployment.yaml`:
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -2333,94 +2507,96 @@ spec:
 ### **🔥 IMMEDIATE PRIORITY (Security Critical)**
 
 - [ ] **Rotate ALL compromised secrets immediately**
-  - [ ] Change MongoDB password
-  - [ ] Regenerate Google OAuth2 client secret  
-  - [ ] Generate new JWT secret (use `openssl rand -base64 64`)
-  - [ ] Update all environment variables
+    - [ ] Change MongoDB password
+    - [ ] Regenerate Google OAuth2 client secret
+    - [ ] Generate new JWT secret (use `openssl rand -base64 64`)
+    - [ ] Update all environment variables
 
 - [ ] **Fix application startup issues**
-  - [ ] Add missing `@EnableScheduling` annotation
-  - [ ] Fix Maven configuration (`lombok.version` property)
-  - [ ] Resolve dependency conflicts
+    - [ ] Add missing `@EnableScheduling` annotation
+    - [ ] Fix Maven configuration (`lombok.version` property)
+    - [ ] Resolve dependency conflicts
 
 - [ ] **Implement environment variable configuration**
-  - [ ] Create secure `application.properties`
-  - [ ] Set up `.env` file with proper secrets
-  - [ ] Update `.gitignore` to exclude sensitive files
+    - [ ] Create secure `application.properties`
+    - [ ] Set up `.env` file with proper secrets
+    - [ ] Update `.gitignore` to exclude sensitive files
 
 ### **⚠️ HIGH PRIORITY (Week 1)**
 
 - [ ] **Enhanced Security Implementation**
-  - [ ] Implement secure JWT configuration with HS512
-  - [ ] Add CSRF protection for OAuth2 endpoints
-  - [ ] Configure secure HTTP headers
-  - [ ] Implement proper CORS configuration
-  - [ ] Add input validation layers
+    - [ ] Implement secure JWT configuration with HS512
+    - [ ] Add CSRF protection for OAuth2 endpoints
+    - [ ] Configure secure HTTP headers
+    - [ ] Implement proper CORS configuration
+    - [ ] Add input validation layers
 
 - [ ] **Database Optimizations**
-  - [ ] Add compound indexes to entities
-  - [ ] Implement TTL indexes for refresh tokens
-  - [ ] Add database connection pooling
-  - [ ] Implement audit fields with versioning
+    - [ ] Add compound indexes to entities
+    - [ ] Implement TTL indexes for refresh tokens
+    - [ ] Add database connection pooling
+    - [ ] Implement audit fields with versioning
 
 - [ ] **Service Layer Improvements**
-  - [ ] Create service interfaces for loose coupling
-  - [ ] Implement proper transaction management
-  - [ ] Add async processing capabilities
-  - [ ] Implement caching strategy
+    - [ ] Create service interfaces for loose coupling
+    - [ ] Implement proper transaction management
+    - [ ] Add async processing capabilities
+    - [ ] Implement caching strategy
 
 ### **📊 MEDIUM PRIORITY (Week 2-3)**
 
 - [ ] **Monitoring & Observability**
-  - [ ] Configure comprehensive health checks
-  - [ ] Implement custom metrics with Micrometer
-  - [ ] Set up Prometheus monitoring
-  - [ ] Configure structured logging
-  - [ ] Add distributed tracing
+    - [ ] Configure comprehensive health checks
+    - [ ] Implement custom metrics with Micrometer
+    - [ ] Set up Prometheus monitoring
+    - [ ] Configure structured logging
+    - [ ] Add distributed tracing
 
 - [ ] **Performance Enhancements**
-  - [ ] Implement Redis caching layer
-  - [ ] Add rate limiting with Bucket4j
-  - [ ] Configure circuit breaker patterns
-  - [ ] Optimize database queries
-  - [ ] Add API documentation with OpenAPI
+    - [ ] Implement Redis caching layer
+    - [ ] Add rate limiting with Bucket4j
+    - [ ] Configure circuit breaker patterns
+    - [ ] Optimize database queries
+    - [ ] Add API documentation with OpenAPI
 
 - [ ] **Testing Strategy**
-  - [ ] Unit tests for all service layers
-  - [ ] Integration tests for OAuth2 flow
-  - [ ] Security tests for authentication
-  - [ ] Performance tests for high load
-  - [ ] Contract tests for API compatibility
+    - [ ] Unit tests for all service layers
+    - [ ] Integration tests for OAuth2 flow
+    - [ ] Security tests for authentication
+    - [ ] Performance tests for high load
+    - [ ] Contract tests for API compatibility
 
 ### **🚀 NICE TO HAVE (Week 4+)**
 
 - [ ] **Advanced Features**
-  - [ ] Multi-factor authentication
-  - [ ] OAuth2 state parameter validation
-  - [ ] Token blacklisting with Redis
-  - [ ] Account lockout mechanisms
-  - [ ] Email verification workflow
+    - [ ] Multi-factor authentication
+    - [ ] OAuth2 state parameter validation
+    - [ ] Token blacklisting with Redis
+    - [ ] Account lockout mechanisms
+    - [ ] Email verification workflow
 
 - [ ] **DevOps & Deployment**
-  - [ ] Docker containerization
-  - [ ] Kubernetes deployment manifests
-  - [ ] CI/CD pipeline with GitHub Actions
-  - [ ] Infrastructure as Code with Terraform
-  - [ ] Automated security scanning
+    - [ ] Docker containerization
+    - [ ] Kubernetes deployment manifests
+    - [ ] CI/CD pipeline with GitHub Actions
+    - [ ] Infrastructure as Code with Terraform
+    - [ ] Automated security scanning
 
 - [ ] **Documentation & Governance**
-  - [ ] API documentation with examples
-  - [ ] Architecture decision records
-  - [ ] Security runbook
-  - [ ] Deployment procedures
-  - [ ] Monitoring playbooks
+    - [ ] API documentation with examples
+    - [ ] Architecture decision records
+    - [ ] Security runbook
+    - [ ] Deployment procedures
+    - [ ] Monitoring playbooks
 
 ---
 
 ## 🏗️ **COMPREHENSIVE PROJECT STRUCTURE & ORGANIZATION**
 
 **🔍 Why Proper Project Structure Matters:**
-A well-organized project structure improves code maintainability, enables team collaboration, follows Spring Boot conventions, and makes your application scalable. Each package serves a specific purpose in the layered architecture pattern, promoting separation of concerns and single responsibility principle.
+A well-organized project structure improves code maintainability, enables team collaboration, follows Spring Boot
+conventions, and makes your application scalable. Each package serves a specific purpose in the layered architecture
+pattern, promoting separation of concerns and single responsibility principle.
 
 ```
 src/
@@ -2649,6 +2825,7 @@ src/
 ## 🎯 **OAUTH2 IMPLEMENTATION ASSESSMENT**
 
 ### **✅ What's Done Well:**
+
 - ✅ Basic OAuth2 flow with Google
 - ✅ JWT token generation and validation
 - ✅ Refresh token rotation
@@ -2656,6 +2833,7 @@ src/
 - ✅ MongoDB integration
 
 ### **❌ Industry Standard Gaps:**
+
 - ❌ Missing PKCE (Proof Key for Code Exchange)
 - ❌ No state parameter validation
 - ❌ Weak CORS configuration
@@ -2669,10 +2847,13 @@ src/
 1. **Implement PKCE for Security:**
 
 **🔍 What Is PKCE (Proof Key for Code Exchange):**
-PKCE prevents authorization code interception attacks by generating a random `code_verifier` and its SHA256 hash `code_challenge` before starting OAuth2 flow. Without PKCE, intercepted authorization codes can be exchanged for access tokens by attackers.
+PKCE prevents authorization code interception attacks by generating a random `code_verifier` and its SHA256 hash
+`code_challenge` before starting OAuth2 flow. Without PKCE, intercepted authorization codes can be exchanged for access
+tokens by attackers.
 
 **📍 Current Vulnerability in SecurityConfig.java:**
-Your OAuth2 configuration lacks PKCE implementation, making authorization codes vulnerable to interception attacks through network sniffing or malicious applications.
+Your OAuth2 configuration lacks PKCE implementation, making authorization codes vulnerable to interception attacks
+through network sniffing or malicious applications.
 
 ```java
 // Add PKCE support in OAuth2 configuration
@@ -2702,10 +2883,12 @@ public OAuth2AuthorizationRequestResolver pkceAuthorizationRequestResolver() {
 2. **Add State Parameter Validation:**
 
 **🔍 What Is State Parameter Security:**
-State parameter prevents CSRF attacks by ensuring OAuth2 authorization requests originate from your application. Without state validation, attackers can trick users into authorizing malicious OAuth2 flows.
+State parameter prevents CSRF attacks by ensuring OAuth2 authorization requests originate from your application. Without
+state validation, attackers can trick users into authorizing malicious OAuth2 flows.
 
 **📍 Current Vulnerability in OAuth2AuthenticationSuccessHandler.java:**
-Your success handler doesn't validate state parameters, allowing cross-site request forgery attacks where malicious sites can initiate OAuth2 flows with attacker accounts.
+Your success handler doesn't validate state parameters, allowing cross-site request forgery attacks where malicious
+sites can initiate OAuth2 flows with attacker accounts.
 
 ```java
 // Implement state parameter validation to prevent CSRF
@@ -2732,10 +2915,12 @@ public class OAuth2StateValidator {
 3. **Fix Weak Security Configurations:**
 
 **🔍 What Are Weak Security Configurations:**
-Your current security setup lacks essential HTTP security headers, proper CORS restrictions, and secure session management that are mandatory for production OAuth2 implementations.
+Your current security setup lacks essential HTTP security headers, proper CORS restrictions, and secure session
+management that are mandatory for production OAuth2 implementations.
 
 **📍 Current Security Gaps in SecurityConfig.java:**
-Missing Content Security Policy, HSTS headers, frame protection, and overly permissive CORS settings create multiple attack vectors including XSS, clickjacking, and unauthorized cross-origin requests.
+Missing Content Security Policy, HSTS headers, frame protection, and overly permissive CORS settings create multiple
+attack vectors including XSS, clickjacking, and unauthorized cross-origin requests.
 
 ```java
 @Bean
@@ -2776,10 +2961,12 @@ public CorsConfigurationSource strictCorsConfiguration() {
 4. **Implement Token Introspection:**
 
 **🔍 What Is Token Introspection (RFC 7662):**
-Token introspection provides an endpoint for validating tokens and retrieving metadata, essential for microservices architecture, API gateways, and debugging token-related issues in production.
+Token introspection provides an endpoint for validating tokens and retrieving metadata, essential for microservices
+architecture, API gateways, and debugging token-related issues in production.
 
 **📍 Current Gap in AuthController.java:**
-Your authentication controller lacks introspection capabilities, making it impossible for other services to validate tokens independently or for monitoring systems to track token usage patterns.
+Your authentication controller lacks introspection capabilities, making it impossible for other services to validate
+tokens independently or for monitoring systems to track token usage patterns.
 
 ```java
 @PostMapping("/introspect")
@@ -2839,12 +3026,14 @@ public static class TokenIntrospectionResponse {
 ## 🔗 **ADDITIONAL RESOURCES**
 
 ### **📚 Learning Materials:**
+
 - [Spring Security OAuth2 Documentation](https://docs.spring.io/spring-security/reference/servlet/oauth2/index.html)
 - [JWT Best Practices](https://tools.ietf.org/html/rfc8725)
 - [OAuth2 Security Best Practices](https://tools.ietf.org/html/draft-ietf-oauth-security-topics)
 - [Spring Boot Production Best Practices](https://docs.spring.io/spring-boot/docs/current/reference/html/deployment.html)
 
 ### **🛠️ Tools & Libraries:**
+
 - **Security**: Spring Security, JWT, OAuth2
 - **Database**: MongoDB, Spring Data MongoDB
 - **Caching**: Redis, Caffeine
@@ -2853,8 +3042,9 @@ public static class TokenIntrospectionResponse {
 - **Documentation**: OpenAPI 3, Swagger UI
 
 ### **🎯 Next Steps:**
+
 1. **Start with security fixes** - Address all critical vulnerabilities immediately
-2. **Implement missing annotations** - Fix application startup issues  
+2. **Implement missing annotations** - Fix application startup issues
 3. **Add comprehensive testing** - Ensure reliability before production
 4. **Set up monitoring** - Implement observability from day one
 5. **Deploy securely** - Use container orchestration with proper secrets management
@@ -2863,26 +3053,34 @@ public static class TokenIntrospectionResponse {
 
 ## 🤝 **CONCLUSION**
 
-Your Spring Boot OAuth2 + JWT application has a solid foundation but requires **significant security hardening** and architectural improvements before production deployment. The most critical issues are the **exposed credentials** and **missing security configurations**.
+Your Spring Boot OAuth2 + JWT application has a solid foundation but requires **significant security hardening** and
+architectural improvements before production deployment. The most critical issues are the **exposed credentials** and *
+*missing security configurations**.
 
 **Immediate Actions Required:**
+
 1. 🚨 **Rotate all compromised secrets NOW**
 2. 🔧 **Fix application startup issues**
 3. 🛡️ **Implement secure configuration management**
 4. 📊 **Add comprehensive monitoring**
 5. 🧪 **Write thorough tests**
 
-Following this comprehensive guide will transform your application into a **production-ready, enterprise-grade** system that follows industry best practices for security, performance, and maintainability.
+Following this comprehensive guide will transform your application into a **production-ready, enterprise-grade** system
+that follows industry best practices for security, performance, and maintainability.
 
-**Remember**: Security is not a feature - it's a fundamental requirement. Start with the critical fixes and work systematically through the checklist to build a robust, scalable platform.
+**Remember**: Security is not a feature - it's a fundamental requirement. Start with the critical fixes and work
+systematically through the checklist to build a robust, scalable platform.
 
 ---
 
-*This review was conducted with the thoroughness of a senior software engineer focusing on security, scalability, and maintainability. Every recommendation is based on industry best practices and real-world production experience.*
+*This review was conducted with the thoroughness of a senior software engineer focusing on security, scalability, and
+maintainability. Every recommendation is based on industry best practices and real-world production experience.*
+
 ```
 ```
 
 Create `src/main/java/com/notvibecoder/backend/dto/AuthRequest.java`:
+
 ```java
 package com.notvibecoder.backend.dto;
 
@@ -2895,6 +3093,7 @@ public record RefreshTokenRequest(
 ```
 
 Update `AuthController.java`:
+
 ```java
 package com.notvibecoder.backend.controller;
 
@@ -2949,6 +3148,7 @@ public class AuthController {
 ### 3. **Improve Exception Handling**
 
 Update `GlobalExceptionHandler.java`:
+
 ```java
 package com.notvibecoder.backend.exceptionhandler;
 
@@ -3050,6 +3250,7 @@ public class GlobalExceptionHandler {
 ### 4. **Improve Security Configuration**
 
 Update `WebConfig.java`:
+
 ```java
 package com.notvibecoder.backend.config;
 
@@ -3080,6 +3281,7 @@ public class WebConfig implements WebMvcConfigurer {
 ### 5. **Fix RefreshTokenService**
 
 Update `RefreshTokenService.java`:
+
 ```java
 // In the createRefreshToken method, replace RuntimeException:
 userRepository.findById(userId)
@@ -3093,6 +3295,7 @@ userRepository.findById(userId)
 ### 1. **Add Unit Tests**
 
 Create `src/test/java/com/notvibecoder/backend/service/AuthServiceTest.java`:
+
 ```java
 package com.notvibecoder.backend.service;
 
@@ -3196,6 +3399,7 @@ class AuthServiceTest {
 ### 2. **Add Integration Tests**
 
 Create `src/test/java/com/notvibecoder/backend/controller/AuthControllerIntegrationTest.java`:
+
 ```java
 package com.notvibecoder.backend.controller;
 
@@ -3289,6 +3493,7 @@ class AuthControllerIntegrationTest {
 ### 1. **Create Docker Configuration**
 
 Create `Dockerfile`:
+
 ```dockerfile
 FROM openjdk:21-jdk-slim
 
@@ -3302,6 +3507,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
 Create `docker-compose.yml`:
+
 ```yaml
 version: '3.8'
 services:
@@ -3334,6 +3540,7 @@ volumes:
 ### 2. **Create Production Properties**
 
 Create `src/main/resources/application-prod.properties`:
+
 ```properties
 # Production configuration
 spring.profiles.active=prod
@@ -3363,46 +3570,46 @@ server.servlet.session.cookie.same-site=strict
 ### Immediate Fixes (Do These Now):
 
 1. **✅ Fix Security Issues:**
-   - [ ] Move secrets to environment variables
-   - [ ] Add `.env` to `.gitignore`
-   - [ ] Generate strong JWT secret
+    - [ ] Move secrets to environment variables
+    - [ ] Add `.env` to `.gitignore`
+    - [ ] Generate strong JWT secret
 
 2. **✅ Fix Application Issues:**
-   - [ ] Add `@EnableScheduling` to main application class
-   - [ ] Fix Maven lombok version in `pom.xml`
+    - [ ] Add `@EnableScheduling` to main application class
+    - [ ] Fix Maven lombok version in `pom.xml`
 
 3. **✅ Add Database Indexes:**
-   - [ ] Update `User.java` with indexes
-   - [ ] Update `RefreshToken.java` with TTL index
+    - [ ] Update `User.java` with indexes
+    - [ ] Update `RefreshToken.java` with TTL index
 
 ### Short-term Improvements (Next Sprint):
 
 4. **✅ Add Validation:**
-   - [ ] Create DTOs for requests
-   - [ ] Add validation annotations to controller
+    - [ ] Create DTOs for requests
+    - [ ] Add validation annotations to controller
 
 5. **✅ Improve Exception Handling:**
-   - [ ] Update `GlobalExceptionHandler`
-   - [ ] Add specific exception types
+    - [ ] Update `GlobalExceptionHandler`
+    - [ ] Add specific exception types
 
 6. **✅ Add Tests:**
-   - [ ] Create unit tests for services
-   - [ ] Add integration tests for controllers
+    - [ ] Create unit tests for services
+    - [ ] Add integration tests for controllers
 
 7. **✅ Add Service Abstractions:**
-   - [ ] Create service interfaces
-   - [ ] Implement dependency injection properly
+    - [ ] Create service interfaces
+    - [ ] Implement dependency injection properly
 
 8. **✅ Add API Documentation:**
-   - [ ] Integrate Swagger/OpenAPI
-   - [ ] Document all endpoints
+    - [ ] Integrate Swagger/OpenAPI
+    - [ ] Document all endpoints
 
 ### Medium-term Enhancements (Future Releases):
 
 9. **✅ Add Monitoring:**
-   - [ ] Add Actuator endpoints
-   - [ ] Implement logging strategy
-   - [ ] Add custom health checks
+    - [ ] Add Actuator endpoints
+    - [ ] Implement logging strategy
+    - [ ] Add custom health checks
 
 10. **✅ Performance Optimization:**
     - [ ] Add caching layer
@@ -3421,16 +3628,16 @@ server.servlet.session.cookie.same-site=strict
 ### Medium-term Enhancements (Future Releases):
 
 7. **✅ Add Monitoring:**
-   - [ ] Add Actuator endpoints
-   - [ ] Implement logging strategy
+    - [ ] Add Actuator endpoints
+    - [ ] Implement logging strategy
 
 8. **✅ Performance Optimization:**
-   - [ ] Add caching layer
-   - [ ] Optimize database queries
+    - [ ] Add caching layer
+    - [ ] Optimize database queries
 
 9. **✅ Security Hardening:**
-   - [ ] Add rate limiting
-   - [ ] Implement CSRF protection
+    - [ ] Add rate limiting
+    - [ ] Implement CSRF protection
 
 ---
 
@@ -3443,6 +3650,7 @@ server.servlet.session.cookie.same-site=strict
 **✅ How to Fix:**
 
 Create `src/main/java/com/notvibecoder/backend/service/AuthService.java`:
+
 ```java
 public interface AuthService {
     RotatedTokens refreshTokens(String refreshToken);
@@ -3453,6 +3661,7 @@ public interface AuthService {
 ```
 
 Create `src/main/java/com/notvibecoder/backend/service/impl/AuthServiceImpl.java`:
+
 ```java
 package com.notvibecoder.backend.service.impl;
 
@@ -3467,6 +3676,7 @@ import com.notvibecoder.backend.service.AuthService;
 **✅ How to Fix:**
 
 Add to `pom.xml`:
+
 ```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
@@ -3479,6 +3689,7 @@ Add to `pom.xml`:
 ```
 
 Create `src/main/java/com/notvibecoder/backend/config/CacheConfig.java`:
+
 ```java
 package com.notvibecoder.backend.config;
 
@@ -3507,6 +3718,7 @@ public class CacheConfig {
 ```
 
 Update `CustomUserDetailsService.java`:
+
 ```java
 @Service
 @RequiredArgsConstructor
@@ -3532,6 +3744,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 **✅ How to Fix:**
 
 Add to `pom.xml`:
+
 ```xml
 <dependency>
     <groupId>com.github.vladimir-bukhtoyarov</groupId>
@@ -3546,6 +3759,7 @@ Add to `pom.xml`:
 ```
 
 Create `src/main/java/com/notvibecoder/backend/config/RateLimitingFilter.java`:
+
 ```java
 package com.notvibecoder.backend.config;
 
@@ -3604,6 +3818,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 **✅ How to Fix:**
 
 Add to `pom.xml`:
+
 ```xml
 <dependency>
     <groupId>org.springdoc</groupId>
@@ -3613,6 +3828,7 @@ Add to `pom.xml`:
 ```
 
 Create `src/main/java/com/notvibecoder/backend/config/OpenApiConfig.java`:
+
 ```java
 package com.notvibecoder.backend.config;
 
@@ -3649,7 +3865,9 @@ public class OpenApiConfig {
 ```
 
 Update `AuthController.java` with API documentation:
+
 ```java
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -3663,16 +3881,16 @@ public class AuthController {
     @PostMapping("/refresh")
     @Operation(summary = "Refresh access token", description = "Generate new access and refresh tokens using existing refresh token")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Tokens refreshed successfully"),
-        @ApiResponse(responseCode = "403", description = "Invalid or expired refresh token"),
-        @ApiResponse(responseCode = "400", description = "Missing refresh token")
+            @ApiResponse(responseCode = "200", description = "Tokens refreshed successfully"),
+            @ApiResponse(responseCode = "403", description = "Invalid or expired refresh token"),
+            @ApiResponse(responseCode = "400", description = "Missing refresh token")
     })
     public ResponseEntity<AuthResponse> refreshToken(
-        @CookieValue(name = "refreshToken") 
-        @NotBlank(message = "Refresh token is required") 
-        @Parameter(description = "Refresh token from HTTP-only cookie") 
-        String requestRefreshToken) {
-        
+            @CookieValue(name = "refreshToken")
+            @NotBlank(message = "Refresh token is required")
+            @Parameter(description = "Refresh token from HTTP-only cookie")
+            String requestRefreshToken) {
+
         AuthService.RotatedTokens rotatedTokens = authService.refreshTokens(requestRefreshToken);
         ResponseCookie refreshTokenCookie = refreshTokenService.createRefreshTokenCookie(rotatedTokens.refreshToken());
 
@@ -3684,14 +3902,14 @@ public class AuthController {
     @PostMapping("/logout")
     @Operation(summary = "Logout user", description = "Invalidate refresh token and clear authentication cookies")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Logged out successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request")
+            @ApiResponse(responseCode = "200", description = "Logged out successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request")
     })
     public ResponseEntity<String> logoutUser(
-        @CookieValue(name = "refreshToken", required = false) 
-        @Parameter(description = "Refresh token from HTTP-only cookie") 
-        String requestRefreshToken) {
-        
+            @CookieValue(name = "refreshToken", required = false)
+            @Parameter(description = "Refresh token from HTTP-only cookie")
+            String requestRefreshToken) {
+
         authService.logout(requestRefreshToken);
         ResponseCookie logoutCookie = refreshTokenService.createLogoutCookie();
         return ResponseEntity.ok()
@@ -3708,6 +3926,7 @@ public class AuthController {
 **✅ How to Fix:**
 
 Create `src/main/java/com/notvibecoder/backend/config/TransactionConfig.java`:
+
 ```java
 package com.notvibecoder.backend.config;
 
@@ -3735,6 +3954,7 @@ public class TransactionConfig {
 **✅ How to Fix:**
 
 Add to `pom.xml`:
+
 ```xml
 <dependency>
     <groupId>io.github.resilience4j</groupId>
@@ -3744,6 +3964,7 @@ Add to `pom.xml`:
 ```
 
 Create `src/main/java/com/notvibecoder/backend/service/ExternalAuthService.java`:
+
 ```java
 package com.notvibecoder.backend.service;
 
@@ -3778,6 +3999,7 @@ public class ExternalAuthService {
 **✅ How to Fix:**
 
 Create `src/main/resources/logback-spring.xml`:
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
@@ -3832,6 +4054,7 @@ Create `src/main/resources/logback-spring.xml`:
 **✅ How to Fix:**
 
 Add to `pom.xml`:
+
 ```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
@@ -3844,6 +4067,7 @@ Add to `pom.xml`:
 ```
 
 Update `application.properties`:
+
 ```properties
 # Actuator configuration
 management.endpoints.web.exposure.include=health,info,metrics,prometheus
@@ -3861,6 +4085,7 @@ management.metrics.export.prometheus.enabled=true
 ```
 
 Create `src/main/java/com/notvibecoder/backend/health/CustomHealthIndicator.java`:
+
 ```java
 package com.notvibecoder.backend.health;
 
@@ -3892,6 +4117,7 @@ public class CustomHealthIndicator implements HealthIndicator {
 ## 🔧 Running the Application
 
 ### Local Development:
+
 ```bash
 # 1. Set environment variables
 export MONGODB_URI="your_mongodb_uri"
@@ -3904,6 +4130,7 @@ export GOOGLE_CLIENT_SECRET="your_google_client_secret"
 ```
 
 ### Using Docker:
+
 ```bash
 # 1. Build the application
 ./mvnw clean package
@@ -3913,6 +4140,7 @@ docker-compose up -d
 ```
 
 ### Testing:
+
 ```bash
 # Run unit tests
 ./mvnw test
@@ -3941,13 +4169,15 @@ docker-compose up -d
 Based on the comprehensive code review, here's what was covered in the README:
 
 ### ✅ **Critical Security Issues (All Covered):**
+
 - [x] Exposed credentials in source code
-- [x] Missing @EnableScheduling annotation  
+- [x] Missing @EnableScheduling annotation
 - [x] Maven configuration issues
 - [x] Input validation missing
 - [x] CORS configuration too permissive
 
 ### ✅ **Architectural Issues (All Covered):**
+
 - [x] Package structure recommendations
 - [x] Service layer abstractions
 - [x] Missing DTOs
@@ -3955,29 +4185,34 @@ Based on the comprehensive code review, here's what was covered in the README:
 - [x] Transaction management
 
 ### ✅ **Code Quality Issues (All Covered):**
+
 - [x] Exception handling improvements
 - [x] Logging strategy
 - [x] Business logic in controllers
 - [x] RefreshToken entity improvements
 
 ### ✅ **Security Enhancements (All Covered):**
-- [x] JWT security improvements  
+
+- [x] JWT security improvements
 - [x] Rate limiting implementation
 - [x] API documentation with security
 - [x] Circuit breaker pattern
 
 ### ✅ **Performance & Scalability (All Covered):**
+
 - [x] Caching strategy with Caffeine
 - [x] Database indexes and TTL
 - [x] Async processing for schedulers
 - [x] Connection pooling configurations
 
 ### ✅ **Testing Infrastructure (All Covered):**
+
 - [x] Unit test examples
 - [x] Integration test examples
 - [x] Test configuration setup
 
 ### ✅ **Additional Features (All Covered):**
+
 - [x] Docker configuration
 - [x] Environment setup
 - [x] Health checks and monitoring
@@ -3996,4 +4231,5 @@ Based on the comprehensive code review, here's what was covered in the README:
 
 ---
 
-**⚠️ Important:** Never commit sensitive information like API keys, passwords, or secrets to version control. Always use environment variables or secure secret management solutions.
+**⚠️ Important:** Never commit sensitive information like API keys, passwords, or secrets to version control. Always use
+environment variables or secure secret management solutions.

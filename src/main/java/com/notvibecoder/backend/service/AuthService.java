@@ -27,13 +27,13 @@ public class AuthService {
                     // ✅ Enhanced security: verify user is still active
                     User user = userRepository.findById(oldToken.getUserId())
                             .orElseThrow(() -> new TokenRefreshException("User not found for refresh token."));
-                    
+
                     // ✅ Check if user account is still enabled
                     if (!user.getEnabled()) {
                         refreshTokenService.deleteByUserId(user.getId());
                         throw new TokenRefreshException("User account is disabled.");
                     }
-                    
+
                     // ✅ Single device: Delete old refresh token (will be only one)
                     refreshTokenService.deleteByUserId(oldToken.getUserId());
 
@@ -53,7 +53,7 @@ public class AuthService {
     public void logout(String requestRefreshToken) {
         logout(requestRefreshToken, null);
     }
-    
+
     @Transactional
     public void logout(String requestRefreshToken, String accessToken) {
         // ✅ Enhanced: Blacklist the current access token immediately
@@ -61,7 +61,7 @@ public class AuthService {
             jwtService.blacklistToken(accessToken, "user_logout");
             log.info("Access token blacklisted on logout");
         }
-        
+
         // ✅ Single device: Delete the single refresh token
         if (requestRefreshToken != null) {
             refreshTokenService.findByToken(requestRefreshToken)
@@ -70,9 +70,10 @@ public class AuthService {
                         log.info("Single session terminated for user: {}", token.getUserId());
                     });
         }
-        
+
         log.info("User logged out successfully from single device");
     }
 
-    public record RotatedTokens(String accessToken, String refreshToken) {}
+    public record RotatedTokens(String accessToken, String refreshToken) {
+    }
 }
