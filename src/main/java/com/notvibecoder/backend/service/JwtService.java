@@ -1,6 +1,7 @@
 package com.notvibecoder.backend.service;
 
 import com.notvibecoder.backend.config.properties.JwtProperties;
+import com.notvibecoder.backend.config.properties.JwtSecurityProperties;
 import com.notvibecoder.backend.entity.BlacklistedToken;
 import com.notvibecoder.backend.repository.BlacklistedTokenRepository;
 import com.notvibecoder.backend.security.UserPrincipal;
@@ -9,18 +10,24 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 
 import java.security.Key;
+import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -32,20 +39,43 @@ public class JwtService {
 
     private final JwtProperties jwtProperties;
     private final BlacklistedTokenRepository blacklistedTokenRepository;
-    
-    private static final String ISSUER = "vibecoder-backend";
-    private static final String AUDIENCE = "vibecoder-frontend";
+    private final JwtSecurityProperties jwtSecurityProperties;
+
+
+    @PostConstruct
+    public void validateJwtConfiguration() {
+        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.secret());
+
+        // Validate key strength
+        Assert.isTrue(keyBytes.length >= 64,
+                "JWT secret must be at least 512 bits (64 bytes) for HS512");
+
+        // Validate entropy (basic check)
+        validateKeyEntropy(keyBytes);
+
+        log.info("✅ JWT configuration validated successfully");
+    }
 
     // ==================== TOKEN EXTRACTION ====================
-    
+    private void validateKeyEntropy(byte[] keyBytes) {
+        // Basic entropy check - ensure key isn't all zeros or repetitive
+        Set<Byte> uniqueBytes = new HashSet<>();
+        for (byte b : keyBytes) {
+            uniqueBytes.add(b);
+        }
+
+        Assert.isTrue(uniqueBytes.size() >= 16,
+                "JWT secret has insufficient entropy - too repetitive");
+    }
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
-    
+
     public String extractJwtId(String token) {
         return extractClaim(token, Claims::getId);
     }
-    
+
     public List<String> extractRoles(String token) {
         return extractClaim(token, claims -> {
             Object roles = claims.get("roles");
@@ -58,7 +88,7 @@ public class JwtService {
             return List.of();
         });
     }
-    
+
     public String extractUserId(String token) {
         return extractClaim(token, claims -> claims.get("userId", String.class));
     }
@@ -69,23 +99,23 @@ public class JwtService {
     }
 
     // ==================== TOKEN GENERATION ====================
-    
+
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> extraClaims = new HashMap<>();
-        
+
         // ✅ Add user roles for authorization
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
         extraClaims.put("roles", roles);
-        
+
         // ✅ Add user ID if available
         if (userDetails instanceof UserPrincipal) {
             UserPrincipal userPrincipal = (UserPrincipal) userDetails;
             extraClaims.put("userId", userPrincipal.getId());
             extraClaims.put("email", userPrincipal.getEmail());
         }
-        
+
         return generateToken(extraClaims, userDetails);
     }
 
@@ -93,25 +123,37 @@ public class JwtService {
         String jwtId = UUID.randomUUID().toString();
         Date now = new Date();
         Date expiration = new Date(now.getTime() + jwtProperties.accessToken().expirationMs());
-        
-        log.debug("Generating enhanced access token for user: {} with JWT ID: {}", userDetails.getUsername(), jwtId);
-        
+
+        // Add security claims
+        extraClaims.put("iat_timestamp", now.getTime());
+        extraClaims.put("token_version", "v2");
+        extraClaims.put("security_level", "standard");
+
+        log.debug("Generating secure token for user: {} with JWT ID: {}",
+                userDetails.getUsername(), jwtId);
+
         return Jwts.builder()
                 .setClaims(extraClaims)
                 .setSubject(userDetails.getUsername())
-                .setIssuer(ISSUER)                           // ✅ Verify token origin
-                .setAudience(AUDIENCE)                       // ✅ Restrict token usage
-                .setId(jwtId)                               // ✅ Unique ID for blacklisting
+                .setIssuer(jwtSecurityProperties.issuer())
+                .setAudience(jwtSecurityProperties.audience())
+                .setId(jwtId)
                 .setIssuedAt(now)
                 .setExpiration(expiration)
-                .claim("sessionId", generateSessionId())     // ✅ Additional security
-                .claim("tokenType", "access")               // ✅ Token type validation
-                .signWith(getSignInKey(), SignatureAlgorithm.HS512) // ✅ Stronger algorithm
+                .claim("sessionId", generateSecureSessionId())
+                .claim("tokenType", "access")
+                .signWith(getSignInKey(), SignatureAlgorithm.HS512)
                 .compact();
     }
 
     // ==================== TOKEN VALIDATION ====================
-    
+    private String generateSecureSessionId() {
+        SecureRandom secureRandom = new SecureRandom();
+        byte[] sessionBytes = new byte[16];
+        secureRandom.nextBytes(sessionBytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(sessionBytes);
+    }
+
     public boolean isTokenValid(String token) {
         try {
             // ✅ Primary security check - blacklist first
@@ -119,30 +161,30 @@ public class JwtService {
                 log.warn("Attempted use of blacklisted token");
                 return false;
             }
-            
+
             // ✅ Check expiration
             if (isTokenExpired(token)) {
                 log.debug("Token is expired");
                 return false;
             }
-            
+
             // ✅ Verify issuer and audience for security
             return isValidIssuer(token) && isValidAudience(token) && isValidTokenType(token);
-            
+
         } catch (Exception e) {
             log.error("Token validation error: {}", e.getMessage());
             return false;
         }
     }
-    
+
     // ==================== TOKEN BLACKLISTING ====================
-    
+
     public void blacklistToken(String token, String reason) {
         try {
             String jwtId = extractJwtId(token);
             String userId = extractUserId(token);
             Date expiration = extractExpiration(token);
-            
+
             BlacklistedToken blacklistedToken = BlacklistedToken.builder()
                     .jwtId(jwtId)
                     .userId(userId != null ? userId : extractUsername(token)) // Fallback to username
@@ -150,16 +192,16 @@ public class JwtService {
                     .blacklistedAt(Instant.now())
                     .expiresAt(expiration.toInstant())
                     .build();
-                    
+
             blacklistedTokenRepository.save(blacklistedToken);
             log.info("Token blacklisted - JWT ID: {}, User: {}, Reason: {}", jwtId, userId, reason);
-            
+
         } catch (Exception e) {
             log.error("Failed to blacklist token: {}", e.getMessage());
             // Don't throw - blacklisting failure shouldn't break logout
         }
     }
-    
+
     public boolean isTokenBlacklisted(String token) {
         try {
             String jwtId = extractJwtId(token);
@@ -169,7 +211,7 @@ public class JwtService {
             return true; // Fail secure - assume blacklisted on error
         }
     }
-    
+
     public void blacklistAllUserTokens(String userId, String reason) {
         try {
             // ✅ Single session: simpler since only one token per user
@@ -180,7 +222,7 @@ public class JwtService {
     }
 
     // ==================== PRIVATE HELPER METHODS ====================
-    
+
     private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
@@ -188,25 +230,25 @@ public class JwtService {
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
-    
+
     private boolean isValidIssuer(String token) {
         try {
             String issuer = extractClaim(token, Claims::getIssuer);
-            return ISSUER.equals(issuer);
+            return jwtSecurityProperties.issuer().equals(issuer);
         } catch (Exception e) {
             return false;
         }
     }
-    
+
     private boolean isValidAudience(String token) {
         try {
             String audience = extractClaim(token, Claims::getAudience);
-            return AUDIENCE.equals(audience);
+            return jwtSecurityProperties.audience().equals(audience);
         } catch (Exception e) {
             return false;
         }
     }
-    
+
     private boolean isValidTokenType(String token) {
         try {
             String tokenType = extractClaim(token, claims -> claims.get("tokenType", String.class));
@@ -214,10 +256,6 @@ public class JwtService {
         } catch (Exception e) {
             return false;
         }
-    }
-    
-    private String generateSessionId() {
-        return UUID.randomUUID().toString().substring(0, 8);
     }
 
     private Claims extractAllClaims(String token) {

@@ -2,6 +2,8 @@ package com.notvibecoder.backend;
 
 import com.notvibecoder.backend.config.properties.AppProperties;
 import com.notvibecoder.backend.config.properties.JwtProperties;
+import com.notvibecoder.backend.config.properties.JwtSecurityProperties;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -10,7 +12,7 @@ import org.springframework.validation.annotation.Validated;
 
 @SpringBootApplication
 @EnableMongoAuditing
-@EnableConfigurationProperties({JwtProperties.class, AppProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, AppProperties.class,JwtSecurityProperties.class})
 @Validated
 public class VibecoderRestBackendApplication {
 
