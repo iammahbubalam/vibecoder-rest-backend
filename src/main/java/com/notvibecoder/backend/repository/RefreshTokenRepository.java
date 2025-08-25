@@ -1,34 +1,33 @@
 package com.notvibecoder.backend.repository;
 
-import com.notvibecoder.backend.entity.RefreshToken;
+import com.notvibecoder.backend.entity.RefreshToken;  // ✅ CORRECT IMPORT
 import org.springframework.data.mongodb.repository.MongoRepository;
+// Removed incompatible import for MongoDB repositories
 import org.springframework.data.mongodb.repository.Query;
-import org.springframework.data.mongodb.repository.Update;
+import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.Optional;
 
+@Repository
 public interface RefreshTokenRepository extends MongoRepository<RefreshToken, String> {
     
     Optional<RefreshToken> findByToken(String token);
     
-    Optional<RefreshToken> findByUserId(String userId); // ✅ Single session: one token per user
-    
-    void deleteByUserId(String userId);
+    @Query("{ 'userId': ?0, 'isRevoked': false }")
+    Optional<RefreshToken> findActiveTokenByUserId(String userId);
+
+    // Use naming convention for delete operation
+    void deleteByUserIdAndIsRevoked(String userId, boolean isRevoked);
     
     void deleteByExpiryDateBefore(Instant date);
     
-    @Query("{ '_id': ?0 }")
-    @Update("{ '$set': { 'isRevoked': true } }")
-    int revokeToken(String tokenId);
+    @Query("{ 'userId': ?0, 'isRevoked': false, 'expiryDate': { $gt: ?1 } }")
+    boolean hasActiveTokens(String userId, Instant currentTime);
     
-    @Query("{ 'userId': ?0, 'isRevoked': false }")
-    @Update("{ '$set': { 'isRevoked': true } }")
-    int revokeAllByUserId(String userId);
+    @Query("{ 'ipAddress': ?0, 'createdAt': { $gte: ?1 } }")
+    long countByIpAddressAndCreatedAtAfter(String ipAddress, Instant after);
     
-    // ✅ Single session queries
+    // ✅ ADDED - Missing method used in service
     boolean existsByUserId(String userId);
-    
-    @Query("{ 'userId': ?0, 'isRevoked': false }")
-    Optional<RefreshToken> findActiveTokenByUserId(String userId);
 }

@@ -32,7 +32,7 @@ public class RefreshTokenService {
     private String environment;
     
     private static final SecureRandom secureRandom = new SecureRandom();
-    private static final int TOKEN_LENGTH = 64; // 512 bits
+    private static final int TOKEN_LENGTH = 64;
 
     public Optional<RefreshToken> findByToken(String token) {
         return refreshTokenRepository.findByToken(token);
@@ -46,23 +46,23 @@ public class RefreshTokenService {
     @Transactional
     public RefreshToken createRefreshToken(String userId, HttpServletRequest request) {
         
-        // ✅ Verify user exists
+        // Verify user exists
         userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
-        // ✅ Single device: Check if user has existing session
-        Optional<RefreshToken> existingToken = refreshTokenRepository.findByUserId(userId);
+        // Single device: Check if user has existing session
+        Optional<RefreshToken> existingToken = refreshTokenRepository.findActiveTokenByUserId(userId);
         if (existingToken.isPresent()) {
             log.info("User {} logging in from new device. Previous session will be terminated.", userId);
         }
 
-        // ✅ Single device enforcement: Delete any existing tokens
-        refreshTokenRepository.deleteByUserId(userId);
+        // Single device enforcement: Delete any existing tokens
+        refreshTokenRepository.deleteByUserIdAndIsRevoked(userId, false);
 
-        // ✅ Generate cryptographically secure token
+        // Generate cryptographically secure token
         String secureToken = generateSecureToken();
         
-        // ✅ Create device fingerprint for security tracking
+        // Create device fingerprint for security tracking
         String deviceFingerprint = request != null ? createDeviceFingerprint(request) : null;
         String clientIp = request != null ? getClientIp(request) : null;
         String userAgent = request != null ? request.getHeader("User-Agent") : null;
@@ -75,12 +75,13 @@ public class RefreshTokenService {
                 .userAgent(userAgent)
                 .expiryDate(Instant.now().plusMillis(jwtProperties.refreshToken().expirationMs()))
                 .createdAt(Instant.now())
-                .lastUsed(Instant.now())
+                .isRevoked(false)  // ✅ ADDED - Explicit default
                 .build();
-        log.info("User-Agent: {}", deviceFingerprint);
+                
+        log.info("Device fingerprint: {}", deviceFingerprint);
         RefreshToken savedToken = refreshTokenRepository.save(refreshToken);
         
-        // ✅ Security audit logging
+        // Security audit logging
         if (request != null) {
             logTokenCreation(userId, request, existingToken.isPresent());
         }
@@ -95,31 +96,31 @@ public class RefreshTokenService {
     
     public RefreshToken verifyExpiration(RefreshToken token, HttpServletRequest request) {
         
-        // ✅ Check if token is revoked
+        // Check if token is revoked
         if (token.isRevoked()) {
             log.warn("Revoked refresh token attempted for user: {}", token.getUserId());
             throw new TokenRefreshException("Token has been revoked. Please login again.");
         }
         
-        // ✅ Check expiration
+        // Check expiration
         if (token.getExpiryDate().isBefore(Instant.now())) {
-            refreshTokenRepository.delete(token);
+            refreshTokenRepository.deleteById(token.getId());  // ✅ FIXED - Use ID instead of object
             log.warn("Expired refresh token deleted for user: {}", token.getUserId());
             throw new TokenRefreshException("Refresh token expired. Please login again.");
         }
         
-        // ✅ Single device security: verify device binding if request available
+        // Single device security: verify device binding if request available
         if (request != null && !verifyDeviceBinding(token, request)) {
-            refreshTokenRepository.delete(token);
+            refreshTokenRepository.deleteById(token.getId());  // ✅ FIXED - Use ID instead of object
             log.error("Device fingerprint mismatch for user: {} - possible token theft or device change", token.getUserId());
             throw new TokenRefreshException("Session security violation detected. Please login again.");
         }
         
-        // ✅ Update last used timestamp for monitoring
+        // Update last used timestamp for monitoring
         token.setLastUsed(Instant.now());
         refreshTokenRepository.save(token);
         
-        // ✅ Security audit logging
+        // Security audit logging
         if (request != null) {
             logTokenUsage(token.getUserId(), request);
         }
@@ -129,7 +130,7 @@ public class RefreshTokenService {
 
     @Transactional
     public void deleteByUserId(String userId) {
-        refreshTokenRepository.deleteByUserId(userId);
+        refreshTokenRepository.deleteByUserIdAndIsRevoked(userId, false);
         log.info("Single session terminated for user: {}", userId);
     }
 
@@ -220,7 +221,7 @@ public class RefreshTokenService {
     }
     
     public Instant getLastActivityTime(String userId) {
-        return refreshTokenRepository.findByUserId(userId)
+        return refreshTokenRepository.findActiveTokenByUserId(userId)
                 .map(RefreshToken::getLastUsed)
                 .orElse(null);
     }

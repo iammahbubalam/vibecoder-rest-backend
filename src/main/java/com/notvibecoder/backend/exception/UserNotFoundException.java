@@ -1,7 +1,11 @@
 package com.notvibecoder.backend.exception;
 
-public class UserNotFoundException extends RuntimeException {
-    public UserNotFoundException(String userId) {
-        super("User not found with id: " + userId);
+public class UserNotFoundException extends BusinessException {
+    public UserNotFoundException(String message) {
+        super(message, "USER_NOT_FOUND");
+    }
+    
+    public UserNotFoundException(String message, String userId) {
+        super(message, "USER_NOT_FOUND", userId);
     }
 }

@@ -8,6 +8,7 @@ import com.notvibecoder.backend.repository.UserRepository;
 import com.notvibecoder.backend.security.oauth2.OAuth2UserInfo;
 import com.notvibecoder.backend.security.oauth2.OAuth2UserInfoFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -16,9 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.Instant;
 import java.util.Collections;
-
-
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -26,7 +27,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
 
-    // Add this constructor to see if the bean is being created
     public CustomOAuth2UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
         System.out.println("=== CustomOAuth2UserService CONSTRUCTOR CALLED ===");
@@ -49,7 +49,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             log.info("=== CUSTOM OAUTH2 USER SERVICE COMPLETED SUCCESSFULLY ===");
             return result;
         } catch (Exception ex) {
-            log.info("=== Error in CustomOAuth2UserService.loadUser() ===", ex);
+            log.error("=== Error in CustomOAuth2UserService.loadUser() ===", ex);
             throw new OAuth2AuthenticationProcessingException("Error processing OAuth2 user", ex);
         }
     }
@@ -67,69 +67,74 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         }
 
         log.info("Checking if user exists in database...");
-        User user = userRepository.findByEmail(oAuth2UserInfo.getEmail())
-                .map(existingUser -> {
-                    log.info("Found existing user, updating...");
-                    return updateExistingUser(existingUser, oAuth2UserInfo, registrationId);
-                })
-                .orElseGet(() -> {
-                    log.info("User not found, registering new user...");
-                    return registerNewUser(registrationId, oAuth2UserInfo);
-                });
-
+        
+        // ✅ SIMPLIFIED: Find or create user
+        User user = findOrCreateUser(oAuth2UserInfo, registrationId);
+        
         log.info("Creating UserPrincipal for user: {}", user.getEmail());
         UserPrincipal principal = UserPrincipal.create(user, oAuth2User.getAttributes());
         log.info("=== OAuth2 user processing completed ===");
         return principal;
     }
 
-    private User registerNewUser(String registrationId, OAuth2UserInfo oAuth2UserInfo) {
-        log.info("=== Registering new user: {} ===", oAuth2UserInfo.getEmail());
-
+    // ✅ SIMPLIFIED: Just find existing or create new - no updates
+    private User findOrCreateUser(OAuth2UserInfo oAuth2UserInfo, String registrationId) {
+        String email = oAuth2UserInfo.getEmail();
+        
+        // Check if user exists
+        Optional<User> existingUserOpt = userRepository.findByEmail(email);
+        
+        if (existingUserOpt.isPresent()) {
+            // ✅ SIMPLE: Return existing user as-is
+            User existingUser = existingUserOpt.get();
+            log.info("Found existing user, returning as-is: {} (ID: {})", 
+                    existingUser.getEmail(), existingUser.getId());
+            return existingUser;
+        }
+        
+        // ✅ CREATE new user only if doesn't exist
+        log.info("User not found, creating new user: {}", email);
+        
         try {
-            AuthProvider provider = AuthProvider.valueOf(registrationId.toLowerCase());
-
-            User user = User.builder()
-                    .provider(provider)
-                    .providerId(oAuth2UserInfo.getId())
+            User newUser = User.builder()
+                    .email(email)
                     .name(oAuth2UserInfo.getName())
-                    .email(oAuth2UserInfo.getEmail())
                     .pictureUrl(oAuth2UserInfo.getImageUrl())
+                    .provider(mapRegistrationIdToProvider(registrationId))
+                    .providerId(oAuth2UserInfo.getId())
                     .roles(Collections.singleton(Role.STUDENT))
+                    .createdAt(Instant.now())
+                    .updatedAt(Instant.now())
                     .build();
-
-            log.info("About to save user to database...");
-            User savedUser = userRepository.save(user);
-            log.info("=== New user registered successfully with ID: {} ===", savedUser.getId());
-
+            // Don't set ID - let MongoDB auto-generate
+            
+            User savedUser = userRepository.save(newUser);
+            log.info("Successfully created new user: {} (ID: {})", 
+                    savedUser.getEmail(), savedUser.getId());
             return savedUser;
+            
+        } catch (DuplicateKeyException e) {
+            log.warn("Duplicate key error during user creation, trying to find existing user: {}", email);
+            // Race condition: another thread created the user
+            return userRepository.findByEmail(email).orElseThrow(
+                () -> new OAuth2AuthenticationProcessingException("Failed to handle duplicate user", e)
+            );
         } catch (Exception e) {
-            log.info("=== Failed to register new user ===", e);
-            throw new OAuth2AuthenticationProcessingException("Failed to register new user", e);
+            log.error("Failed to create new user: {}", email, e);
+            throw new OAuth2AuthenticationProcessingException("Failed to create user", e);
         }
     }
 
-    private User updateExistingUser(User existingUser, OAuth2UserInfo oAuth2UserInfo, String registrationId) {
-    log.info("Updating existing user: {}", existingUser.getEmail());
+    // ✅ Safe mapping method for registration ID to AuthProvider
+    private AuthProvider mapRegistrationIdToProvider(String registrationId) {
+        return switch (registrationId.toLowerCase()) {
+            case "google" -> AuthProvider.google;
+            case "local" -> AuthProvider.local;
 
-    try {
-        // Convert to lowercase to match the enum
-        AuthProvider provider = AuthProvider.valueOf(registrationId.toLowerCase());
-        
-        existingUser.setName(oAuth2UserInfo.getName());
-        existingUser.setPictureUrl(oAuth2UserInfo.getImageUrl());
-        
-        if (!existingUser.getProvider().equals(provider)) {
-            existingUser.setProvider(provider);
-            existingUser.setProviderId(oAuth2UserInfo.getId());
-        }
-        
-        User savedUser = userRepository.save(existingUser);
-        log.info("Successfully updated user: {}", savedUser.getEmail());
-        return savedUser;
-    } catch (Exception e) {
-        log.info("Failed to update existing user: {}", e.getMessage(), e);
-        throw new OAuth2AuthenticationProcessingException("Failed to update existing user", e);
+            default -> {
+                log.warn("Unknown registration ID: {}, defaulting to google", registrationId);
+                yield AuthProvider.google;
+            }
+        };
     }
-}
 }

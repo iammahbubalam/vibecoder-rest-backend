@@ -60,6 +60,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/oauth2/**", "/login/**").permitAll()
+                        .requestMatchers("/api/v1/**").authenticated()  // ✅ Explicitly handle API routes
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

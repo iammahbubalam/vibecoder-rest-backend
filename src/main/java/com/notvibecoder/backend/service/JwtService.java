@@ -13,6 +13,9 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -40,7 +43,6 @@ public class JwtService {
     private final JwtProperties jwtProperties;
     private final BlacklistedTokenRepository blacklistedTokenRepository;
     private final JwtSecurityProperties jwtSecurityProperties;
-
 
     @PostConstruct
     public void validateJwtConfiguration() {
@@ -178,7 +180,7 @@ public class JwtService {
     }
 
     // ==================== TOKEN BLACKLISTING ====================
-
+    @CacheEvict(value = "blacklist", key = "#token", cacheManager = "tokenCacheManager")
     public void blacklistToken(String token, String reason) {
         try {
             String jwtId = extractJwtId(token);
@@ -202,13 +204,14 @@ public class JwtService {
         }
     }
 
+    @Cacheable(value = "blacklist", key = "#token", cacheManager = "tokenCacheManager")
     public boolean isTokenBlacklisted(String token) {
         try {
             String jwtId = extractJwtId(token);
             return blacklistedTokenRepository.existsByJwtId(jwtId);
         } catch (Exception e) {
             log.error("Error checking blacklist: {}", e.getMessage());
-            return true; // Fail secure - assume blacklisted on error
+            return true; // Fail secure
         }
     }
 

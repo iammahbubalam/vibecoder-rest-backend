@@ -33,11 +33,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                   @NonNull HttpServletResponse response, 
                                   @NonNull FilterChain filterChain) throws ServletException, IOException {
 
+        log.debug("Processing request: {} {}", request.getMethod(), request.getRequestURI());
+        
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userEmail;
 
         if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
+            log.debug("No valid Authorization header found for: {}", request.getRequestURI());
             filterChain.doFilter(request, response);
             return;
         }
