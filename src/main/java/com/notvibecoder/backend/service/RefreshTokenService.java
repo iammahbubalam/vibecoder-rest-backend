@@ -3,7 +3,6 @@ package com.notvibecoder.backend.service;
 import com.notvibecoder.backend.entity.RefreshToken;
 import com.notvibecoder.backend.exception.TokenRefreshException;
 import com.notvibecoder.backend.repository.RefreshTokenRepository;
-import com.notvibecoder.backend.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +21,6 @@ public class RefreshTokenService {
     public final RefreshTokenCookieService refreshTokenCookieService;
     public final SessionManagementService sessionManagementService;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final UserRepository userRepository;
     private final TokenGeneratorService tokenGeneratorService;
     private final DeviceSecurityService deviceSecurityService;
     private final SecurityAuditService securityAuditService;
@@ -60,13 +58,6 @@ public class RefreshTokenService {
         securityAuditService.logTokenUsage(token.getUserId(), request);
 
         return token;
-    }
-
-
-    // Private helper methods
-    private void validateUserExists(String userId) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
     }
 
 
