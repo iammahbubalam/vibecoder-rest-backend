@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.controller.dto.response;
+package com.notvibecoder.backend.dto;
 
 
 import com.fasterxml.jackson.annotation.JsonInclude;

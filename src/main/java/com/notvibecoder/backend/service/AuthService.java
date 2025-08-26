@@ -1,9 +1,10 @@
 package com.notvibecoder.backend.service;
 
+import com.notvibecoder.backend.dto.RotatedTokens;
 import com.notvibecoder.backend.exception.TokenRefreshException;
 import com.notvibecoder.backend.repository.UserRepository;
 import com.notvibecoder.backend.security.UserPrincipal;
-import com.notvibecoder.backend.service.dto.RotatedTokens;
+
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

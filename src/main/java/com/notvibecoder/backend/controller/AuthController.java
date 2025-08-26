@@ -1,6 +1,6 @@
 package com.notvibecoder.backend.controller;
 
-import com.notvibecoder.backend.controller.dto.response.ApiResponse;
+import com.notvibecoder.backend.dto.ApiResponse;
 import com.notvibecoder.backend.service.AuthService;
 import com.notvibecoder.backend.service.RefreshTokenService;
 import com.notvibecoder.backend.shared.utils.SecurityUtils;

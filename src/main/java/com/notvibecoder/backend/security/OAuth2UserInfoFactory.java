@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.security.oauth2;
+package com.notvibecoder.backend.security;
 
 
 import com.notvibecoder.backend.entity.AuthProvider;

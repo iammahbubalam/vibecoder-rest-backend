@@ -29,9 +29,4 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### VS Code ###
-.vscode/
-PHASE3-IMPLEMENTATION.md
-BUCKET4J-RATE-LIMITING-GUIDE.md
-FOLDER-STRUCTURE-GUIDE.md
-PHASE2-IMPLEMENTATION.md
+MODULAR_MONOLITH_REFACTORING_PLAN.md

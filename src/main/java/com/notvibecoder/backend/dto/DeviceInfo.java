@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.service.dto;
+package com.notvibecoder.backend.dto;
 
 public record DeviceInfo(
         String fingerprint,

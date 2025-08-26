@@ -5,8 +5,7 @@ import com.notvibecoder.backend.entity.Role;
 import com.notvibecoder.backend.entity.User;
 import com.notvibecoder.backend.exception.OAuth2AuthenticationProcessingException;
 import com.notvibecoder.backend.repository.UserRepository;
-import com.notvibecoder.backend.security.oauth2.OAuth2UserInfo;
-import com.notvibecoder.backend.security.oauth2.OAuth2UserInfoFactory;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
