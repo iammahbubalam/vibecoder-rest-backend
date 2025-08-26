@@ -7,6 +7,7 @@ import com.notvibecoder.backend.exception.OAuth2AuthenticationProcessingExceptio
 import com.notvibecoder.backend.repository.UserRepository;
 import com.notvibecoder.backend.security.oauth2.OAuth2UserInfo;
 import com.notvibecoder.backend.security.oauth2.OAuth2UserInfoFactory;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -19,118 +20,174 @@ import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Optional;
 
+/**
+ * Custom OAuth2 User Service that processes OAuth2 users and creates UserPrincipal objects.
+ * <p>
+ * Flow:
+ * 1. Load OAuth2 user from provider (Google, etc.)
+ * 2. Extract user information using provider-specific extractors
+ * 3. Find existing user or create new user in database
+ * 4. Return UserPrincipal wrapping the user entity
+ */
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
 
-    public CustomOAuth2UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-        System.out.println("=== CustomOAuth2UserService CONSTRUCTOR CALLED ===");
-        log.info("=== CustomOAuth2UserService CONSTRUCTOR CALLED ===");
-    }
-
     @Override
     @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        System.out.println("=== CUSTOM OAUTH2 USER SERVICE CALLED ===");
-        log.info("=== CUSTOM OAUTH2 USER SERVICE CALLED ===");
-        log.info("Loading user from provider: {}", userRequest.getClientRegistration().getRegistrationId());
-
-        OAuth2User oAuth2User = super.loadUser(userRequest);
-        log.info("OAuth2User loaded from provider: {}", oAuth2User.getAttributes());
+        String providerId = userRequest.getClientRegistration().getRegistrationId();
+        log.info("Starting OAuth2 authentication process for provider: {}", providerId);
 
         try {
-            OAuth2User result = processOAuth2User(userRequest, oAuth2User);
-            System.out.println("=== CUSTOM OAUTH2 USER SERVICE COMPLETED SUCCESSFULLY ===");
-            log.info("=== CUSTOM OAUTH2 USER SERVICE COMPLETED SUCCESSFULLY ===");
-            return result;
-        } catch (Exception ex) {
-            log.error("=== Error in CustomOAuth2UserService.loadUser() ===", ex);
-            throw new OAuth2AuthenticationProcessingException("Error processing OAuth2 user", ex);
+            // Step 1: Load user from OAuth2 provider
+            OAuth2User oAuth2User = super.loadUser(userRequest);
+            log.debug("Successfully loaded OAuth2 user from provider");
+
+            // Step 2: Process the OAuth2 user and return UserPrincipal
+            UserPrincipal userPrincipal = processOAuth2User(userRequest, oAuth2User);
+
+            log.info("OAuth2 authentication completed successfully for user: {}",
+                    userPrincipal.getEmail());
+            return userPrincipal;
+
+        } catch (OAuth2AuthenticationProcessingException e) {
+            log.error("OAuth2 processing failed for provider {}: {}", providerId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error during OAuth2 authentication for provider: {}", providerId, e);
+            throw new OAuth2AuthenticationProcessingException("OAuth2 authentication failed", e);
         }
     }
 
-    private OAuth2User processOAuth2User(OAuth2UserRequest oAuth2UserRequest, OAuth2User oAuth2User) {
-        log.info("=== Processing OAuth2 user ===");
-        String registrationId = oAuth2UserRequest.getClientRegistration().getRegistrationId();
-        log.info("Registration ID: {}", registrationId);
+    /**
+     * Processes OAuth2 user information and creates UserPrincipal.
+     */
+    private UserPrincipal processOAuth2User(OAuth2UserRequest userRequest, OAuth2User oAuth2User) {
+        String registrationId = userRequest.getClientRegistration().getRegistrationId();
 
-        OAuth2UserInfo oAuth2UserInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(registrationId, oAuth2User.getAttributes());
-        log.info("OAuth2UserInfo created for email: {}", oAuth2UserInfo.getEmail());
+        // Extract user information using provider-specific logic
+        OAuth2UserInfo userInfo = extractUserInfo(registrationId, oAuth2User);
 
-        if (!StringUtils.hasText(oAuth2UserInfo.getEmail())) {
+        // Validate required information
+        validateUserInfo(userInfo);
+
+        // Find or create user in database
+        User user = findOrCreateUser(userInfo, registrationId);
+
+        // Create and return UserPrincipal
+        return UserPrincipal.create(user, oAuth2User.getAttributes());
+    }
+
+    /**
+     * Extracts user information from OAuth2User using provider-specific extractors.
+     */
+    private OAuth2UserInfo extractUserInfo(String registrationId, OAuth2User oAuth2User) {
+        try {
+            OAuth2UserInfo userInfo = OAuth2UserInfoFactory.getOAuth2UserInfo(registrationId, oAuth2User.getAttributes());
+            log.debug("Extracted user info for email: {}", userInfo.getEmail());
+            return userInfo;
+        } catch (Exception e) {
+            log.error("Failed to extract user info for provider: {}", registrationId, e);
+            throw new OAuth2AuthenticationProcessingException(
+                    "Failed to extract user information from provider: " + registrationId, e);
+        }
+    }
+
+    /**
+     * Validates that required user information is present.
+     */
+    private void validateUserInfo(OAuth2UserInfo userInfo) {
+        if (!StringUtils.hasText(userInfo.getEmail())) {
+            log.error("Email not found in OAuth2 provider response");
             throw new OAuth2AuthenticationProcessingException("Email not found from OAuth2 provider");
         }
 
-        log.info("Checking if user exists in database...");
-
-        // ✅ SIMPLIFIED: Find or create user
-        User user = findOrCreateUser(oAuth2UserInfo, registrationId);
-
-        log.info("Creating UserPrincipal for user: {}", user.getEmail());
-        UserPrincipal principal = UserPrincipal.create(user, oAuth2User.getAttributes());
-        log.info("=== OAuth2 user processing completed ===");
-        return principal;
+        if (!StringUtils.hasText(userInfo.getName())) {
+            log.warn("Name not found in OAuth2 provider response for email: {}", userInfo.getEmail());
+        }
     }
 
-    // ✅ SIMPLIFIED: Just find existing or create new - no updates
-    private User findOrCreateUser(OAuth2UserInfo oAuth2UserInfo, String registrationId) {
-        String email = oAuth2UserInfo.getEmail();
+    /**
+     * Finds existing user or creates new user in database.
+     * Handles race conditions gracefully.
+     */
+    private User findOrCreateUser(OAuth2UserInfo userInfo, String registrationId) {
+        String email = userInfo.getEmail();
 
-        // Check if user exists
-        Optional<User> existingUserOpt = userRepository.findByEmail(email);
+        // Try to find existing user first
+        return userRepository.findByEmail(email)
+                .map(existingUser -> {
+                    log.debug("Found existing user: {}", email);
+                    return existingUser;
+                })
+                .orElseGet(() -> createNewUser(userInfo, registrationId));
+    }
 
-        if (existingUserOpt.isPresent()) {
-            // ✅ SIMPLE: Return existing user as-is
-            User existingUser = existingUserOpt.get();
-            log.info("Found existing user, returning as-is: {} (ID: {})",
-                    existingUser.getEmail(), existingUser.getId());
-            return existingUser;
-        }
-
-        // ✅ CREATE new user only if doesn't exist
-        log.info("User not found, creating new user: {}", email);
+    /**
+     * Creates a new user in the database.
+     * Handles duplicate key exceptions from race conditions.
+     */
+    private User createNewUser(OAuth2UserInfo userInfo, String registrationId) {
+        String email = userInfo.getEmail();
+        log.info("Creating new user: {}", email);
 
         try {
-            User newUser = User.builder()
-                    .email(email)
-                    .name(oAuth2UserInfo.getName())
-                    .pictureUrl(oAuth2UserInfo.getImageUrl())
-                    .provider(mapRegistrationIdToProvider(registrationId))
-                    .providerId(oAuth2UserInfo.getId())
-                    .roles(Collections.singleton(Role.STUDENT))
-                    .createdAt(Instant.now())
-                    .updatedAt(Instant.now())
-                    .build();
-            // Don't set ID - let MongoDB auto-generate
-
+            User newUser = buildNewUser(userInfo, registrationId);
             User savedUser = userRepository.save(newUser);
-            log.info("Successfully created new user: {} (ID: {})",
+
+            log.info("Successfully created new user: {} with ID: {}",
                     savedUser.getEmail(), savedUser.getId());
             return savedUser;
 
         } catch (DuplicateKeyException e) {
-            log.warn("Duplicate key error during user creation, trying to find existing user: {}", email);
-            // Race condition: another thread created the user
-            return userRepository.findByEmail(email).orElseThrow(
-                    () -> new OAuth2AuthenticationProcessingException("Failed to handle duplicate user", e)
-            );
+            log.warn("Duplicate key detected for email: {}. Attempting to find existing user.", email);
+
+            // Handle race condition: another thread created the user
+            return userRepository.findByEmail(email)
+                    .orElseThrow(() -> new OAuth2AuthenticationProcessingException(
+                            "User creation failed due to race condition", e));
+
         } catch (Exception e) {
             log.error("Failed to create new user: {}", email, e);
-            throw new OAuth2AuthenticationProcessingException("Failed to create user", e);
+            throw new OAuth2AuthenticationProcessingException("User creation failed", e);
         }
     }
 
-    // ✅ Safe mapping method for registration ID to AuthProvider
+    /**
+     * Builds a new User entity from OAuth2 user information.
+     */
+    private User buildNewUser(OAuth2UserInfo userInfo, String registrationId) {
+        Instant now = Instant.now();
+
+        return User.builder()
+                .email(userInfo.getEmail())
+                .name(userInfo.getName())
+                .pictureUrl(userInfo.getImageUrl())
+                .provider(mapRegistrationIdToProvider(registrationId))
+                .providerId(userInfo.getId())
+                .roles(Collections.singleton(Role.STUDENT))
+                .enabled(true)  // New OAuth2 users are enabled by default
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+    }
+
+    /**
+     * Maps OAuth2 registration ID to internal AuthProvider enum.
+     */
     private AuthProvider mapRegistrationIdToProvider(String registrationId) {
+        if (!StringUtils.hasText(registrationId)) {
+            log.warn("Empty registration ID, defaulting to google");
+            return AuthProvider.google;
+        }
+
         return switch (registrationId.toLowerCase()) {
             case "google" -> AuthProvider.google;
-            case "local" -> AuthProvider.local;
-
             default -> {
                 log.warn("Unknown registration ID: {}, defaulting to google", registrationId);
                 yield AuthProvider.google;

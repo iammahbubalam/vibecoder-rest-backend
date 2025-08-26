@@ -1393,16 +1393,16 @@ class AuthServiceTest {
 
     @Mock
     private RefreshTokenService refreshTokenService;
-    
+
     @Mock
     private JwtService jwtService;
-    
+
     @Mock
     private UserRepository userRepository;
-    
+
     @Mock
     private RedisTemplate<String, String> redisTemplate;
-    
+
     @InjectMocks
     private AuthService authService;
 
@@ -1442,13 +1442,13 @@ class AuthServiceTest {
                 .thenReturn("new-access-token");
 
         // Act
-        AuthService.RotatedTokens result = authService.refreshTokens("valid-refresh-token");
+        AuthService.RotatedTokens result = authService.refreshTokens("valid-refresh-token", request);
 
         // Assert
         assertNotNull(result);
         assertEquals("new-access-token", result.accessToken());
         assertEquals("valid-refresh-token", result.refreshToken());
-        
+
         verify(refreshTokenService).deleteByUserId("user123");
         verify(refreshTokenService).createRefreshToken("user123");
     }
@@ -1460,8 +1460,8 @@ class AuthServiceTest {
                 .thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(TokenRefreshException.class, 
-                () -> authService.refreshTokens("invalid-token"));
+        assertThrows(TokenRefreshException.class,
+                () -> authService.refreshTokens("invalid-token", request));
     }
 
     @Test
@@ -1614,7 +1614,7 @@ public class AuthController {
             throw new TokenRefreshException("Refresh token is missing.");
         }
 
-        AuthService.RotatedTokens rotatedTokens = authService.refreshTokens(requestRefreshToken);
+        AuthService.RotatedTokens rotatedTokens = authService.refreshTokens(requestRefreshToken, request);
         ResponseCookie refreshTokenCookie = refreshTokenService.createRefreshTokenCookie(rotatedTokens.refreshToken());
 
         return ResponseEntity.ok()
@@ -3098,7 +3098,6 @@ Update `AuthController.java`:
 package com.notvibecoder.backend.controller;
 
 import com.notvibecoder.backend.dto.AuthResponse;
-import com.notvibecoder.backend.exception.TokenRefreshException;
 import com.notvibecoder.backend.service.AuthService;
 import com.notvibecoder.backend.service.RefreshTokenService;
 import jakarta.validation.constraints.NotBlank;
@@ -3120,11 +3119,11 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refreshToken(
-        @CookieValue(name = "refreshToken") 
-        @NotBlank(message = "Refresh token is required") 
-        String requestRefreshToken) {
-        
-        AuthService.RotatedTokens rotatedTokens = authService.refreshTokens(requestRefreshToken);
+            @CookieValue(name = "refreshToken")
+            @NotBlank(message = "Refresh token is required")
+            String requestRefreshToken) {
+
+        AuthService.RotatedTokens rotatedTokens = authService.refreshTokens(requestRefreshToken, request);
         ResponseCookie refreshTokenCookie = refreshTokenService.createRefreshTokenCookie(rotatedTokens.refreshToken());
 
         return ResponseEntity.ok()
@@ -3134,8 +3133,8 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<String> logoutUser(
-        @CookieValue(name = "refreshToken", required = false) String requestRefreshToken) {
-        
+            @CookieValue(name = "refreshToken", required = false) String requestRefreshToken) {
+
         authService.logout(requestRefreshToken);
         ResponseCookie logoutCookie = refreshTokenService.createLogoutCookie();
         return ResponseEntity.ok()
@@ -3372,7 +3371,7 @@ class AuthServiceTest {
         when(jwtService.generateToken(any(UserPrincipal.class))).thenReturn(accessToken);
 
         // When
-        AuthService.RotatedTokens result = authService.refreshTokens(oldTokenValue);
+        AuthService.RotatedTokens result = authService.refreshTokens(oldTokenValue, request);
 
         // Then
         assertNotNull(result);
@@ -3391,7 +3390,7 @@ class AuthServiceTest {
         when(refreshTokenService.findByToken(tokenValue)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThrows(TokenRefreshException.class, () -> authService.refreshTokens(tokenValue));
+        assertThrows(TokenRefreshException.class, () -> authService.refreshTokens(tokenValue, request));
     }
 }
 ```

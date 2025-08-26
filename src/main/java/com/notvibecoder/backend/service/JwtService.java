@@ -104,8 +104,7 @@ public class JwtService {
         extraClaims.put("roles", roles);
 
         // ✅ Add user ID if available
-        if (userDetails instanceof UserPrincipal) {
-            UserPrincipal userPrincipal = (UserPrincipal) userDetails;
+        if (userDetails instanceof UserPrincipal userPrincipal) {
             extraClaims.put("userId", userPrincipal.getId());
             extraClaims.put("email", userPrincipal.getEmail());
         }

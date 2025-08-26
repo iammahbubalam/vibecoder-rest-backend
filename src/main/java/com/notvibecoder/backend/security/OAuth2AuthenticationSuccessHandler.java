@@ -1,8 +1,6 @@
 package com.notvibecoder.backend.security;
 
 import com.notvibecoder.backend.config.properties.AppProperties;
-import com.notvibecoder.backend.entity.RefreshToken;
-import com.notvibecoder.backend.service.CustomUserDetailsService;
 import com.notvibecoder.backend.service.JwtService;
 import com.notvibecoder.backend.service.RefreshTokenService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,14 +10,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 
+/**
+ * Handles successful OAuth2 authentication by generating JWT tokens and redirecting users.
+ * Expects the principal to be a UserPrincipal instance from CustomOAuth2UserService.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -28,72 +28,96 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final RefreshTokenService refreshTokenService;
     private final JwtService jwtService;
     private final AppProperties appProperties;
-    private final CustomUserDetailsService userDetailsService; // Inject UserDetailsService
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+                                        Authentication authentication) throws IOException {
         String targetUrl = determineTargetUrl(request, response, authentication);
-        log.debug("Determined target URL: {}", targetUrl);
+
         if (response.isCommitted()) {
-            log.debug("Response has already been committed. Unable to redirect to {}", targetUrl);
+            log.debug("Response already committed. Cannot redirect to: {}", targetUrl);
             return;
         }
+
         clearAuthenticationAttributes(request);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 
     @Override
-    protected String determineTargetUrl(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
-        log.info("=== AUTHENTICATION SUCCESS HANDLER CALLED ===");
-        log.info("Authentication type: {}", authentication.getClass().getName());
-        log.info("Principal type: {}", authentication.getPrincipal().getClass().getName());
+    protected String determineTargetUrl(HttpServletRequest request, HttpServletResponse response,
+                                        Authentication authentication) {
+        log.info("Processing OAuth2 authentication success");
 
-        UserPrincipal principal;
-
-        // Try to cast to UserPrincipal first (from CustomOAuth2UserService)
         try {
-            principal = (UserPrincipal) authentication.getPrincipal();
-            log.info("Successfully got UserPrincipal for user: {}", principal.getEmail());
-        } catch (ClassCastException e) {
-            // Fallback: principal is OAuth2User, extract email and load from database
-            log.warn("Principal is OAuth2User, not UserPrincipal. Loading user from database.");
-            OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-            log.info("OAuth2 User Attributes: {}", oAuth2User.getAttributes());
-            String email = oAuth2User.getAttribute("email");
-            log.info("Email: {}", email);
+            UserPrincipal principal = extractUserPrincipal(authentication);
+            return buildSuccessRedirectUrl(request, response, principal);
 
-            if (email == null) {
-                log.info("Could not extract email from OAuth2 principal, redirecting to error page.");
-                return UriComponentsBuilder.fromUriString(appProperties.oauth2().redirectUri())
-                        .queryParam("error", "EmailNotFound")
-                        .build().toUriString();
-            }
+        } catch (Exception e) {
+            log.error("Error processing OAuth2 authentication", e);
+            return buildErrorRedirectUrl();
+        }
+    }
 
-            try {
-                principal = (UserPrincipal) userDetailsService.loadUserByUsername(email);
-            } catch (UsernameNotFoundException ex) {
-                log.info("User not found in database: {}, redirecting to error page.", email);
-                return UriComponentsBuilder.fromUriString(appProperties.oauth2().redirectUri())
-                        .queryParam("error", "UserNotFound")
-                        .build().toUriString();
-            }
+
+    /**
+     * Extracts UserPrincipal from authentication object.
+     * Throws exception if principal is not of expected type.
+     */
+    private UserPrincipal extractUserPrincipal(Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+
+        if (!(principal instanceof UserPrincipal userPrincipal)) {
+            log.error("Expected UserPrincipal but got: {}. Check CustomOAuth2UserService configuration.",
+                    principal.getClass().getSimpleName());
+            throw new IllegalStateException("Invalid principal type: " + principal.getClass().getSimpleName());
         }
 
-        // Generate Access Token using our UserPrincipal
-        String accessToken = jwtService.generateToken(principal);
-        log.info("JWT Token generated successfully");
+        log.info("Successfully extracted UserPrincipal for user: {}", userPrincipal.getEmail());
 
-        // Create Refresh Token and Cookie
-        RefreshToken refreshToken = refreshTokenService.createRefreshToken(principal.getId());
-        ResponseCookie refreshTokenCookie = refreshTokenService.createRefreshTokenCookie(refreshToken.getToken());
-        log.info("Refresh Token created successfully");
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+        return userPrincipal;
+    }
 
-        log.info("Successfully authenticated user {}. Redirecting to frontend with access token.", principal.getEmail());
+    /**
+     * Generates tokens and builds success redirect URL.
+     */
+    private String buildSuccessRedirectUrl(HttpServletRequest request, HttpServletResponse response, UserPrincipal principal) {
+        try {
+            // Generate access token
+            String accessToken = jwtService.generateToken(principal);
+            log.debug("Generated JWT access token for user: {}", principal.getEmail());
+            ResponseCookie refreshTokenCookie = refreshTokenService.createRefreshTokenCookie(principal.getId(), request);
+            response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+            log.debug("Created refresh token cookie for user: {}", principal.getEmail());
 
-        // Add access token as a query parameter for the frontend to consume
-        return UriComponentsBuilder.fromUriString(appProperties.oauth2().redirectUri())
-                .queryParam("token", accessToken)
-                .build().toUriString();
+            // Build redirect URL with access token
+            String redirectUrl = UriComponentsBuilder
+                    .fromUriString(appProperties.oauth2().redirectUri())
+                    .queryParam("token", accessToken)
+                    .build()
+                    .toUriString();
+
+            log.info("OAuth2 authentication successful for user: {}. Redirecting to: {}",
+                    principal.getEmail(), appProperties.oauth2().redirectUri());
+
+            return redirectUrl;
+
+        } catch (Exception e) {
+            log.error("Error generating tokens for user: {}", principal.getEmail(), e);
+            throw new RuntimeException("Token generation failed", e);
+        }
+    }
+
+    /**
+     * Builds error redirect URL with error parameter.
+     */
+    private String buildErrorRedirectUrl() {
+        String errorUrl = UriComponentsBuilder
+                .fromUriString(appProperties.oauth2().redirectUri())
+                .queryParam("error", "ProcessingError")
+                .build()
+                .toUriString();
+
+        log.warn("Redirecting to error page with code: {}", "ProcessingError");
+        return errorUrl;
     }
 }

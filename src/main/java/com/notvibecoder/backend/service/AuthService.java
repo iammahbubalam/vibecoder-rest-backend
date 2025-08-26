@@ -1,12 +1,13 @@
 package com.notvibecoder.backend.service;
 
-import com.notvibecoder.backend.entity.RefreshToken;
-import com.notvibecoder.backend.entity.User;
 import com.notvibecoder.backend.exception.TokenRefreshException;
 import com.notvibecoder.backend.repository.UserRepository;
 import com.notvibecoder.backend.security.UserPrincipal;
+import com.notvibecoder.backend.service.dto.RotatedTokens;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,62 +19,44 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final SessionManagementService sessionManagementService;
 
     @Transactional
-    public RotatedTokens refreshTokens(String requestRefreshToken) {
+    public RotatedTokens refreshUser(String requestRefreshToken, HttpServletRequest request) {
         return refreshTokenService.findByToken(requestRefreshToken)
-                .map(refreshTokenService::verifyExpiration)
+                .map(token -> refreshTokenService.verifyRefreshToken(token, request))
                 .map(oldToken -> {
-                    // ✅ Enhanced security: verify user is still active
-                    User user = userRepository.findById(oldToken.getUserId())
+                    var user = userRepository.findById(oldToken.getUserId())
                             .orElseThrow(() -> new TokenRefreshException("User not found for refresh token."));
-
-                    // ✅ Check if user account is still enabled
                     if (!user.getEnabled()) {
-                        refreshTokenService.deleteByUserId(user.getId());
+                        sessionManagementService.revokeUserSessions(oldToken);
                         throw new TokenRefreshException("User account is disabled.");
                     }
-
-                    // ✅ Single device: Delete old refresh token (will be only one)
-                    refreshTokenService.deleteByUserId(oldToken.getUserId());
-
-                    // ✅ Single device: Create new refresh token (ensures only one exists)
-                    RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(oldToken.getUserId());
-
-                    // Create new access token with enhanced claims
-                    String newAccessToken = jwtService.generateToken(UserPrincipal.create(user, null));
+                    var cookie = refreshTokenService.createRefreshTokenCookie(oldToken.getUserId(), request);
+                    String accessToken = jwtService.generateToken(UserPrincipal.create(user, null));
 
                     log.info("Single session tokens refreshed successfully for user {}", user.getEmail());
-                    return new RotatedTokens(newAccessToken, newRefreshToken.getToken());
+                    return new RotatedTokens(accessToken, cookie);
                 })
                 .orElseThrow(() -> new TokenRefreshException("Refresh token not found in database."));
     }
 
     @Transactional
-    public void logout(String requestRefreshToken) {
-        logout(requestRefreshToken, null);
-    }
-
-    @Transactional
-    public void logout(String requestRefreshToken, String accessToken) {
-        // ✅ Enhanced: Blacklist the current access token immediately
+    public ResponseCookie logout(String requestRefreshToken, String accessToken) {
         if (accessToken != null) {
             jwtService.blacklistToken(accessToken, "user_logout");
             log.info("Access token blacklisted on logout");
         }
-
-        // ✅ Single device: Delete the single refresh token
         if (requestRefreshToken != null) {
             refreshTokenService.findByToken(requestRefreshToken)
                     .ifPresent(token -> {
-                        refreshTokenService.deleteByUserId(token.getUserId());
+                        sessionManagementService.revokeUserSessions(token);
                         log.info("Single session terminated for user: {}", token.getUserId());
                     });
         }
-
         log.info("User logged out successfully from single device");
+        return refreshTokenService.createLogoutCookie();
     }
 
-    public record RotatedTokens(String accessToken, String refreshToken) {
-    }
+
 }

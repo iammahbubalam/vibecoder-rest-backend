@@ -1,6 +1,6 @@
 package com.notvibecoder.backend.controller;
 
-import com.notvibecoder.backend.dto.ApiResponse;
+import com.notvibecoder.backend.controller.dto.response.ApiResponse;
 import com.notvibecoder.backend.service.AuthService;
 import com.notvibecoder.backend.service.RefreshTokenService;
 import com.notvibecoder.backend.shared.utils.SecurityUtils;
@@ -37,12 +37,10 @@ public class AuthController {
             String clientIp = SecurityUtils.getClientIpAddress(request);
             log.info("Token refresh attempt from IP: {}", clientIp);
 
-            var rotatedTokens = authService.refreshTokens(requestRefreshToken);
-            var refreshTokenCookie = refreshTokenService.createRefreshTokenCookie(
-                    rotatedTokens.refreshToken());
+            var rotatedTokens = authService.refreshUser(requestRefreshToken, request);
 
             return ResponseEntity.ok()
-                    .header("Set-Cookie", refreshTokenCookie.toString())
+                    .header("Set-Cookie", rotatedTokens.cookie().toString())
                     .body(ApiResponse.success("Token refreshed successfully",
                             Map.of("accessToken", rotatedTokens.accessToken())));
 
@@ -63,10 +61,10 @@ public class AuthController {
 
         try {
             String accessToken = extractAccessTokenFromRequest(request);
-            authService.logout(requestRefreshToken, accessToken);
 
-            var logoutCookie = refreshTokenService.createLogoutCookie();
 
+            var logoutCookie = authService.logout(requestRefreshToken, accessToken);
+            log.info("Logout attempt from IP: {}", SecurityUtils.getClientIpAddress(request));
             return ResponseEntity.ok()
                     .header("Set-Cookie", logoutCookie.toString())
                     .body(ApiResponse.success("Logged out successfully",

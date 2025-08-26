@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -29,4 +30,7 @@ public interface RefreshTokenRepository extends MongoRepository<RefreshToken, St
 
     // ✅ ADDED - Missing method used in service
     boolean existsByUserId(String userId);
+
+    List<RefreshToken> findAllByUserId(String userId);
+
 }
