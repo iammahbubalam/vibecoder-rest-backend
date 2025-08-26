@@ -2,7 +2,6 @@ package com.notvibecoder.backend.controller;
 
 import com.notvibecoder.backend.dto.ApiResponse;
 import com.notvibecoder.backend.service.AuthService;
-import com.notvibecoder.backend.service.RefreshTokenService;
 import com.notvibecoder.backend.shared.utils.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
@@ -24,8 +23,6 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
-    private final RefreshTokenService refreshTokenService;
-
     @GetMapping("/refresh")
     public ResponseEntity<ApiResponse<Map<String, String>>> refreshToken(
             @CookieValue(name = "refreshToken", required = false)

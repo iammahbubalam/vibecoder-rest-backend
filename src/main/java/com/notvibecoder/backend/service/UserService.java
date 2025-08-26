@@ -21,7 +21,7 @@ public class UserService {
 
     @Cacheable(value = "users", key = "#email")
     @Transactional(readOnly = true)
-    public com.notvibecoder.backend.entity.User findByEmail(String email) {
+    public User findByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
     }
