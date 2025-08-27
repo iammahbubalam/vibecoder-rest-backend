@@ -169,7 +169,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .pictureUrl(userInfo.getImageUrl())
                 .provider(mapRegistrationIdToProvider(registrationId))
                 .providerId(userInfo.getId())
-                .roles(Collections.singleton(Role.STUDENT))
+                .roles(Collections.singleton(Role.USER))
                 .enabled(true)  // New OAuth2 users are enabled by default
                 .createdAt(now)
                 .updatedAt(now)
