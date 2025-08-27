@@ -1,5 +1,6 @@
 package com.notvibecoder.backend.modules.user.service;
 
+import com.notvibecoder.backend.modules.user.dto.UserUpdateRequest;
 import com.notvibecoder.backend.modules.user.entity.User;
 import com.notvibecoder.backend.core.exception.UserNotFoundException;
 import com.notvibecoder.backend.modules.user.repository.UserRepository;
@@ -29,7 +30,7 @@ public class UserService {
     // ← UPDATED CACHE NAME AND EVICTION
     @CacheEvict(value = {"users-by-email", "users-by-id"}, key = "#email")
     @Transactional
-    public User updateProfile(String email, User updateRequest) {
+    public User updateProfile(String email, UserUpdateRequest updateRequest) {
         User existingUser = findByEmail(email);
 
         if (updateRequest.getName() != null) {

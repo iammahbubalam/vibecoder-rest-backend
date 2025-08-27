@@ -1,16 +1,17 @@
 package com.notvibecoder.backend.modules.auth.controller;
 
 import com.notvibecoder.backend.core.dto.ApiResponse;
+import com.notvibecoder.backend.core.exception.BusinessException;
 import com.notvibecoder.backend.modules.auth.service.AuthService;
 import com.notvibecoder.backend.core.utils.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,10 +26,13 @@ public class AuthController {
     private final AuthService authService;
     @GetMapping("/refresh")
     public ResponseEntity<ApiResponse<Map<String, String>>> refreshToken(
-            @CookieValue(name = "refreshToken", required = false)
-            @NotBlank(message = "Refresh token is required")
-            String requestRefreshToken,
+            @CookieValue(name = "refreshToken", required = false) String requestRefreshToken,
             HttpServletRequest request) {
+
+        if (requestRefreshToken == null || requestRefreshToken.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Refresh token is required", "MISSING_REFRESH_TOKEN"));
+        }
 
         try {
             String clientIp = SecurityUtils.getClientIpAddress(request);
@@ -41,25 +45,26 @@ public class AuthController {
                     .body(ApiResponse.success("Token refreshed successfully",
                             Map.of("accessToken", rotatedTokens.accessToken())));
 
-        } catch (Exception e) {
+        } catch (BusinessException e) {
             log.error("Token refresh failed from IP: {} - Error: {}",
+                    SecurityUtils.getClientIpAddress(request), e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+        } catch (Exception e) {
+            log.error("Unexpected error during token refresh from IP: {} - Error: {}",
                     SecurityUtils.getClientIpAddress(request), e.getMessage());
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Token refresh failed", "TOKEN_REFRESH_ERROR"));
         }
     }
 
-
-    @GetMapping("/logout")
-//    @PostMapping("/logout")
+    @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Map<String, String>>> logout(
             @CookieValue(name = "refreshToken", required = false) String requestRefreshToken,
             HttpServletRequest request) {
 
         try {
             String accessToken = extractAccessTokenFromRequest(request);
-
-
             var logoutCookie = authService.logout(requestRefreshToken, accessToken);
             log.info("Logout attempt from IP: {}", SecurityUtils.getClientIpAddress(request));
             return ResponseEntity.ok()
