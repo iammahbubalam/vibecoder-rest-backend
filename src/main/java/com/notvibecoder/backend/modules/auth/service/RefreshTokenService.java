@@ -1,7 +1,7 @@
 package com.notvibecoder.backend.service;
 
 import com.notvibecoder.backend.entity.RefreshToken;
-import com.notvibecoder.backend.exception.TokenRefreshException;
+import com.notvibecoder.backend.core.exception.TokenRefreshException;
 import com.notvibecoder.backend.repository.RefreshTokenRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;

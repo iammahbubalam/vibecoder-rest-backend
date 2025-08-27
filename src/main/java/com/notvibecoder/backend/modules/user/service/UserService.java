@@ -1,7 +1,7 @@
 package com.notvibecoder.backend.service;
 
 import com.notvibecoder.backend.entity.User;
-import com.notvibecoder.backend.exception.UserNotFoundException;
+import com.notvibecoder.backend.core.exception.UserNotFoundException;
 import com.notvibecoder.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

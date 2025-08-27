@@ -2,7 +2,7 @@ package com.notvibecoder.backend.security;
 
 
 import com.notvibecoder.backend.entity.AuthProvider;
-import com.notvibecoder.backend.exception.OAuth2AuthenticationProcessingException;
+import com.notvibecoder.backend.core.exception.OAuth2AuthenticationProcessingException;
 
 import java.util.Map;
 

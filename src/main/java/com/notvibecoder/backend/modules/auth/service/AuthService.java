@@ -1,7 +1,7 @@
 package com.notvibecoder.backend.service;
 
 import com.notvibecoder.backend.dto.RotatedTokens;
-import com.notvibecoder.backend.exception.TokenRefreshException;
+import com.notvibecoder.backend.core.exception.TokenRefreshException;
 import com.notvibecoder.backend.repository.UserRepository;
 import com.notvibecoder.backend.security.UserPrincipal;
 

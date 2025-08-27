@@ -1,8 +1,8 @@
 package com.notvibecoder.backend.controller.advice;
 
-import com.notvibecoder.backend.dto.ApiResponse;
-import com.notvibecoder.backend.exception.BusinessException;
-import com.notvibecoder.backend.exception.ValidationException;
+import com.notvibecoder.backend.core.dto.ApiResponse;
+import com.notvibecoder.backend.core.exception.BusinessException;
+import com.notvibecoder.backend.core.exception.ValidationException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;

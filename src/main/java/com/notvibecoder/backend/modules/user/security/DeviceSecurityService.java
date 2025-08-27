@@ -1,6 +1,6 @@
 package com.notvibecoder.backend.service;
 
-import com.notvibecoder.backend.dto.DeviceInfo;
+import com.notvibecoder.backend.core.dto.DeviceInfo;
 import com.notvibecoder.backend.entity.RefreshToken;
 
 import jakarta.servlet.http.HttpServletRequest;

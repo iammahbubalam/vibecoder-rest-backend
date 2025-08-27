@@ -1,6 +1,6 @@
 package com.notvibecoder.backend.controller;
 
-import com.notvibecoder.backend.dto.ApiResponse;
+import com.notvibecoder.backend.core.dto.ApiResponse;
 import com.notvibecoder.backend.entity.User;
 import com.notvibecoder.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
