@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.controller.advice;
+package com.notvibecoder.backend.modules.common.controller.advice;
 
 import com.notvibecoder.backend.core.dto.ApiResponse;
 import com.notvibecoder.backend.core.exception.BusinessException;

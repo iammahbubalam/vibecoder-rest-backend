@@ -1,7 +1,7 @@
-package com.notvibecoder.backend.service;
+package com.notvibecoder.backend.modules.system.service;
 
-import com.notvibecoder.backend.entity.RefreshToken;
-import com.notvibecoder.backend.repository.RefreshTokenRepository;
+import com.notvibecoder.backend.modules.auth.entity.RefreshToken;
+import com.notvibecoder.backend.modules.auth.repository.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

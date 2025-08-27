@@ -1,7 +1,7 @@
-package com.notvibecoder.backend.controller;
+package com.notvibecoder.backend.modules.auth.controller;
 
 import com.notvibecoder.backend.core.dto.ApiResponse;
-import com.notvibecoder.backend.service.AuthService;
+import com.notvibecoder.backend.modules.auth.service.AuthService;
 import com.notvibecoder.backend.core.utils.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;

@@ -1,5 +1,6 @@
-package com.notvibecoder.backend.entity;
+package com.notvibecoder.backend.modules.user.entity;
 
+import com.notvibecoder.backend.modules.auth.entity.AuthProvider;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

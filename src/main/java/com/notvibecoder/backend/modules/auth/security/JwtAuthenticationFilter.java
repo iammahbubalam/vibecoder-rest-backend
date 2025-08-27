@@ -1,6 +1,6 @@
-package com.notvibecoder.backend.security;
+package com.notvibecoder.backend.modules.auth.security;
 
-import com.notvibecoder.backend.service.JwtService;
+import com.notvibecoder.backend.modules.auth.service.JwtService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

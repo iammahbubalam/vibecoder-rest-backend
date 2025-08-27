@@ -1,8 +1,8 @@
 package com.notvibecoder.backend.config;
 
-import com.notvibecoder.backend.security.CustomOAuth2UserService;
-import com.notvibecoder.backend.security.JwtAuthenticationFilter;
-import com.notvibecoder.backend.security.OAuth2AuthenticationSuccessHandler;
+import com.notvibecoder.backend.modules.auth.security.CustomOAuth2UserService;
+import com.notvibecoder.backend.modules.auth.security.JwtAuthenticationFilter;
+import com.notvibecoder.backend.modules.auth.security.OAuth2AuthenticationSuccessHandler;
 import com.notvibecoder.backend.shared.filter.RateLimitingFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

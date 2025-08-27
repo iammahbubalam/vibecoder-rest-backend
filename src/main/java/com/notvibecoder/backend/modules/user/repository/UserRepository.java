@@ -1,9 +1,9 @@
-package com.notvibecoder.backend.repository;
+package com.notvibecoder.backend.modules.user.repository;
 
 
-import com.notvibecoder.backend.entity.AuthProvider;
-import com.notvibecoder.backend.entity.Role;
-import com.notvibecoder.backend.entity.User;
+import com.notvibecoder.backend.modules.auth.entity.AuthProvider;
+import com.notvibecoder.backend.modules.user.entity.Role;
+import com.notvibecoder.backend.modules.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;

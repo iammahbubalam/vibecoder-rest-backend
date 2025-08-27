@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.service;
+package com.notvibecoder.backend.modules.auth.service;
 
 import org.springframework.stereotype.Service;
 

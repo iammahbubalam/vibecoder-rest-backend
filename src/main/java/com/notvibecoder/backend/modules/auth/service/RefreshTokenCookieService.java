@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.service;
+package com.notvibecoder.backend.modules.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

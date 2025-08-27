@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.service;
+package com.notvibecoder.backend.modules.auth.service;
 
 import com.notvibecoder.backend.config.properties.JwtProperties;
 import lombok.RequiredArgsConstructor;

@@ -390,11 +390,12 @@ public class BlacklistedToken {
 **File:** `scheduler/TokenCleanupScheduler.java`
 
 **Replace entire file with:**
+
 ```java
 package com.notvibecoder.backend.scheduler;
 
-import com.notvibecoder.backend.repository.RefreshTokenRepository;
-import com.notvibecoder.backend.service.JwtBlacklistService;
+import com.notvibecoder.backend.modules.auth.repository.RefreshTokenRepository;
+import com.notvibecoder.backend.modules.auth.service.JwtBlacklistService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -417,7 +418,7 @@ public class TokenCleanupScheduler {
 
             // Clean up expired refresh tokens
             long deletedRefreshTokens = refreshTokenRepository.deleteByExpiryDateBefore(now);
-            
+
             // ← ADD BLACKLIST CLEANUP
             jwtBlacklistService.cleanupExpiredTokens();
 
@@ -659,11 +660,13 @@ public static class RateLimitService {
 **File:** `scheduler/TokenCleanupScheduler.java`
 
 **Add rate limiting cleanup:**
+
 ```java
 package com.notvibecoder.backend.scheduler;
 
-import com.notvibecoder.backend.repository.RefreshTokenRepository;
-import com.notvibecoder.backend.service.JwtBlacklistService;
+import com.notvibecoder.backend.modules.auth.repository.RefreshTokenRepository;
+import com.notvibecoder.backend.modules.auth.service.JwtBlacklistService;
+import com.notvibecoder.backend.modules.auth.service.JwtBlacklistService;
 import com.notvibecoder.backend.shared.config.RateLimitingConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -678,7 +681,7 @@ import java.time.Instant;
 public class TokenCleanupScheduler {
 
     private final RefreshTokenRepository refreshTokenRepository;
-    private final JwtBlacklistService jwtBlacklistService;
+    private final com.notvibecoder.backend.modules.auth.service.JwtBlacklistService jwtBlacklistService;
     private final RateLimitingConfig.RateLimitService rateLimitService; // ← ADD THIS
 
     @Scheduled(fixedRate = 3600000) // Every hour
@@ -688,7 +691,7 @@ public class TokenCleanupScheduler {
 
             // Clean up expired refresh tokens
             long deletedRefreshTokens = refreshTokenRepository.deleteByExpiryDateBefore(now);
-            
+
             // Clean up expired blacklisted tokens
             jwtBlacklistService.cleanupExpiredTokens();
 

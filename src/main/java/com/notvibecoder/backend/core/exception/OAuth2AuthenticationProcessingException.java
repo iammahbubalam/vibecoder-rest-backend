@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.exception;
+package com.notvibecoder.backend.core.exception;
 
 
 import org.springframework.security.core.AuthenticationException;

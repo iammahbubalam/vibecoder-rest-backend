@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.entity;
+package com.notvibecoder.backend.modules.auth.entity;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

@@ -1,6 +1,6 @@
-package com.notvibecoder.backend.repository;
+package com.notvibecoder.backend.modules.auth.repository;
 
-import com.notvibecoder.backend.entity.RefreshToken;
+import com.notvibecoder.backend.modules.auth.entity.RefreshToken;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;

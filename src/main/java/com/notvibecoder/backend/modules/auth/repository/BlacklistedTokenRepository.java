@@ -1,6 +1,6 @@
-package com.notvibecoder.backend.repository;
+package com.notvibecoder.backend.modules.auth.repository;
 
-import com.notvibecoder.backend.entity.BlacklistedToken;
+import com.notvibecoder.backend.modules.auth.entity.BlacklistedToken;
 
 import java.time.Instant;
 

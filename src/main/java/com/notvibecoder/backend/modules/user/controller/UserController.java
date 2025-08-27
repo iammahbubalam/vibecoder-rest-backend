@@ -1,8 +1,8 @@
-package com.notvibecoder.backend.controller;
+package com.notvibecoder.backend.modules.user.controller;
 
 import com.notvibecoder.backend.core.dto.ApiResponse;
-import com.notvibecoder.backend.entity.User;
-import com.notvibecoder.backend.service.UserService;
+import com.notvibecoder.backend.modules.user.entity.User;
+import com.notvibecoder.backend.modules.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

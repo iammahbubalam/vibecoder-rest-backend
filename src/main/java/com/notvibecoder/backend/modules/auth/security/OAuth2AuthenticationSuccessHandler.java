@@ -1,8 +1,8 @@
-package com.notvibecoder.backend.security;
+package com.notvibecoder.backend.modules.auth.security;
 
 import com.notvibecoder.backend.config.properties.AppProperties;
-import com.notvibecoder.backend.service.JwtService;
-import com.notvibecoder.backend.service.RefreshTokenService;
+import com.notvibecoder.backend.modules.auth.service.JwtService;
+import com.notvibecoder.backend.modules.auth.service.RefreshTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

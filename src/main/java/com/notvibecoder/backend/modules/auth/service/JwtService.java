@@ -1,8 +1,8 @@
-package com.notvibecoder.backend.service;
+package com.notvibecoder.backend.modules.auth.service;
 
 import com.notvibecoder.backend.config.properties.JwtProperties;
 import com.notvibecoder.backend.config.properties.JwtSecurityProperties;
-import com.notvibecoder.backend.security.UserPrincipal;
+import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;

@@ -1,8 +1,11 @@
-package com.notvibecoder.backend.service;
+package com.notvibecoder.backend.modules.auth.service;
 
-import com.notvibecoder.backend.entity.RefreshToken;
+import com.notvibecoder.backend.modules.auth.entity.RefreshToken;
 import com.notvibecoder.backend.core.exception.TokenRefreshException;
-import com.notvibecoder.backend.repository.RefreshTokenRepository;
+import com.notvibecoder.backend.modules.auth.repository.RefreshTokenRepository;
+import com.notvibecoder.backend.modules.user.security.DeviceSecurityService;
+import com.notvibecoder.backend.modules.system.service.SecurityAuditService;
+import com.notvibecoder.backend.modules.system.service.SessionManagementService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

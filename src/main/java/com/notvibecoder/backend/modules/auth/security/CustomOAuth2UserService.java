@@ -1,10 +1,10 @@
-package com.notvibecoder.backend.security;
+package com.notvibecoder.backend.modules.auth.security;
 
-import com.notvibecoder.backend.entity.AuthProvider;
-import com.notvibecoder.backend.entity.Role;
-import com.notvibecoder.backend.entity.User;
+import com.notvibecoder.backend.modules.auth.entity.AuthProvider;
+import com.notvibecoder.backend.modules.user.entity.Role;
+import com.notvibecoder.backend.modules.user.entity.User;
 import com.notvibecoder.backend.core.exception.OAuth2AuthenticationProcessingException;
-import com.notvibecoder.backend.repository.UserRepository;
+import com.notvibecoder.backend.modules.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

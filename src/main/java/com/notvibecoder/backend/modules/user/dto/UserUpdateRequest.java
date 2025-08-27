@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.dto;
+package com.notvibecoder.backend.modules.user.dto;
 
 public class UserUpdateRequest {
 

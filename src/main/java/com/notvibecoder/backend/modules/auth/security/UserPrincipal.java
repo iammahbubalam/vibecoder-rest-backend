@@ -1,6 +1,6 @@
-package com.notvibecoder.backend.security;
+package com.notvibecoder.backend.modules.auth.security;
 
-import com.notvibecoder.backend.entity.User;
+import com.notvibecoder.backend.modules.user.entity.User;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

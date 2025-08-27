@@ -1,7 +1,7 @@
-package com.notvibecoder.backend.service;
+package com.notvibecoder.backend.modules.auth.service;
 
-import com.notvibecoder.backend.entity.BlacklistedToken;
-import com.notvibecoder.backend.repository.BlacklistedTokenRepository;
+import com.notvibecoder.backend.modules.auth.entity.BlacklistedToken;
+import com.notvibecoder.backend.modules.auth.repository.BlacklistedTokenRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

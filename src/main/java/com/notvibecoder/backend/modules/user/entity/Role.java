@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.entity;
+package com.notvibecoder.backend.modules.user.entity;
 
 public enum Role {
     STUDENT,

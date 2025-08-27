@@ -1,6 +1,6 @@
-package com.notvibecoder.backend.controller;
+package com.notvibecoder.backend.modules.system.controller;
 
-import com.notvibecoder.backend.security.UserPrincipal;
+import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;

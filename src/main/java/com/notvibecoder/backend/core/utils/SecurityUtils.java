@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.shared.utils;
+package com.notvibecoder.backend.core.utils;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;

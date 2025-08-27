@@ -1,8 +1,8 @@
-package com.notvibecoder.backend.service;
+package com.notvibecoder.backend.modules.user.service;
 
-import com.notvibecoder.backend.entity.User;
+import com.notvibecoder.backend.modules.user.entity.User;
 import com.notvibecoder.backend.core.exception.UserNotFoundException;
-import com.notvibecoder.backend.repository.UserRepository;
+import com.notvibecoder.backend.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
