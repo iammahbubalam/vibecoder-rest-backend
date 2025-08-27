@@ -16,41 +16,25 @@ import java.util.Arrays;
 @EnableCaching
 public class CacheConfig {
 
-    @Bean
+      @Bean
     @Primary
     public CacheManager cacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager();
         cacheManager.setCaffeine(defaultCaffeineConfig());
-        cacheManager.setCacheNames(Arrays.asList("users", "tokens", "blacklist"));
-        return cacheManager;
-    }
-
-    @Bean("userCacheManager")
-    public CacheManager userCacheManager() {
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager("users");
-        cacheManager.setCaffeine(Caffeine.newBuilder()
-                .maximumSize(1000)
-                .expireAfterWrite(Duration.ofMinutes(15))
-                .expireAfterAccess(Duration.ofMinutes(5))
-                .recordStats()
-        );
-        return cacheManager;
-    }
-
-    @Bean("tokenCacheManager")
-    public CacheManager tokenCacheManager() {
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager("tokens", "blacklist");
-        cacheManager.setCaffeine(Caffeine.newBuilder()
-                .maximumSize(5000)
-                .expireAfterWrite(Duration.ofMinutes(10))
-                .recordStats()
-        );
+        
+        // Set ALL cache names with consistent configuration
+        cacheManager.setCacheNames(Arrays.asList(
+            "users-by-email", 
+            "users-by-id", 
+            "blacklist", 
+            "tokens"
+        ));
         return cacheManager;
     }
 
     private Caffeine<Object, Object> defaultCaffeineConfig() {
         return Caffeine.newBuilder()
-                .maximumSize(1000)
+                .maximumSize(5000)  // Increased for all caches
                 .expireAfterWrite(Duration.ofMinutes(15))
                 .expireAfterAccess(Duration.ofMinutes(5))
                 .recordStats();

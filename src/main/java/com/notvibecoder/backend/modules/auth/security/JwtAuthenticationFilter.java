@@ -29,50 +29,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                    @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
+protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                @NonNull HttpServletResponse response,
+                                @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        log.debug("Processing request: {} {}", request.getMethod(), request.getRequestURI());
+    log.debug("Processing request: {} {}", request.getMethod(), request.getRequestURI());
 
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userEmail;
+    final String authHeader = request.getHeader("Authorization");
+    
+    if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
+        log.debug("No valid Authorization header found for: {}", request.getRequestURI());
+        filterChain.doFilter(request, response);
+        return;
+    }
 
-        if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
-            log.debug("No valid Authorization header found for: {}", request.getRequestURI());
-            filterChain.doFilter(request, response);
-            return;
-        }
+    final String jwt = authHeader.substring(7);
 
-        jwt = authHeader.substring(7);
-
-        try {
-            userEmail = jwtService.extractUsername(jwt);
-
+    try {
+        // ← PARSE TOKEN ONCE AND VALIDATE ALL CLAIMS
+        if (jwtService.isTokenValid(jwt)) {
+            String userEmail = jwtService.extractUsername(jwt);
+            
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-                // ✅ Enhanced validation with blacklist checking (single device compatible)
-                if (jwtService.isTokenValid(jwt)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                    // ✅ Store token in request for logout functionality
-                    request.setAttribute("jwt", jwt);
-                } else {
-                    log.warn("Invalid or blacklisted token for user: {} (Single device session)", userEmail);
-                }
+                request.setAttribute("jwt", jwt);
+                log.debug("Authentication successful for user: {}", userEmail);
             }
-        } catch (JwtException e) {
-            log.error("JWT authentication error for single device session: {}", e.getMessage());
+        } else {
+            log.warn("Invalid or blacklisted token");
         }
-
-        filterChain.doFilter(request, response);
+    } catch (JwtException e) {
+        log.error("JWT authentication error: {}", e.getMessage());
     }
+
+    filterChain.doFilter(request, response);
+
+}
 }

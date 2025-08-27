@@ -20,7 +20,7 @@ public class JwtBlacklistService {
     private final BlacklistedTokenRepository blacklistedTokenRepository;
     private final JwtTokenUtil jwtTokenUtil;
 
-    @CacheEvict(value = "blacklist", key = "#token", cacheManager = "tokenCacheManager")
+@CacheEvict(value = "blacklist", key = "#token")
     public void blacklistToken(String token, String reason) {
         try {
             String jwtId = jwtTokenUtil.extractJwtId(token);
@@ -45,7 +45,7 @@ public class JwtBlacklistService {
         }
     }
 
-    @Cacheable(value = "blacklist", key = "#token", cacheManager = "tokenCacheManager")
+        @Cacheable(value = "blacklist", key = "#token")
     public boolean isTokenBlacklisted(String token) {
         try {
             String jwtId = jwtTokenUtil.extractJwtId(token);

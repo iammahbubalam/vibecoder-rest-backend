@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -19,19 +18,20 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    @Cacheable(value = "users", key = "#email")
+    // ← UPDATED CACHE NAME
+    @Cacheable(value = "users-by-email", key = "#email")
     @Transactional(readOnly = true)
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
     }
 
-    @CacheEvict(value = "users", key = "#email")
+    // ← UPDATED CACHE NAME AND EVICTION
+    @CacheEvict(value = {"users-by-email", "users-by-id"}, key = "#email")
     @Transactional
     public User updateProfile(String email, User updateRequest) {
         User existingUser = findByEmail(email);
 
-        // Update allowed fields
         if (updateRequest.getName() != null) {
             existingUser.setName(updateRequest.getName());
         }
@@ -40,14 +40,14 @@ public class UserService {
         }
 
         existingUser.setUpdatedAt(Instant.now());
-
         User savedUser = userRepository.save(existingUser);
+        
         log.info("User profile updated: {}", email);
-
         return savedUser;
     }
 
-    @Cacheable(value = "users", key = "#id")
+    // ← UPDATED CACHE NAME
+    @Cacheable(value = "users-by-id", key = "#id")
     @Transactional(readOnly = true)
     public User findById(String id) {
         return userRepository.findById(id)

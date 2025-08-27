@@ -134,28 +134,42 @@ public class JwtService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(sessionBytes);
     }
 
-    public boolean isTokenValid(String token) {
-        try {
-            // ✅ Primary security check - blacklist first
-            if (jwtBlacklistService.isTokenBlacklisted(token)) {
-                log.warn("Attempted use of blacklisted token");
-                return false;
-            }
-
-            // ✅ Check expiration
-            if (isTokenExpired(token)) {
-                log.debug("Token is expired");
-                return false;
-            }
-
-            // ✅ Verify issuer and audience for security
-            return isValidIssuer(token) && isValidAudience(token) && isValidTokenType(token);
-
-        } catch (Exception e) {
-            log.error("Token validation error: {}", e.getMessage());
+public boolean isTokenValid(String token) {
+    try {
+        // Check blacklist first (fastest check)
+        if (jwtBlacklistService.isTokenBlacklisted(token)) {
+            log.warn("Attempted use of blacklisted token");
             return false;
         }
+
+        // Check expiration using extractClaim method
+        Date expiration = extractClaim(token, Claims::getExpiration);
+        if (expiration.before(new Date())) {
+            log.debug("Token is expired");
+            return false;
+        }
+
+        // Verify issuer using extractClaim method
+        String issuer = extractClaim(token, Claims::getIssuer);
+        if (!jwtSecurityProperties.issuer().equals(issuer)) {
+            return false;
+        }
+
+        // Verify audience using extractClaim method
+        String audience = extractClaim(token, Claims::getAudience);
+        if (!jwtSecurityProperties.audience().equals(audience)) {
+            return false;
+        }
+
+        // Verify token type using extractClaim method
+        String tokenType = extractClaim(token, claims -> claims.get("tokenType", String.class));
+        return "access".equals(tokenType);
+
+    } catch (Exception e) {
+        log.error("Token validation error: {}", e.getMessage());
+        return false;
     }
+}
 
     // ==================== BLACKLIST OPERATIONS (DELEGATION) ====================
 
@@ -172,37 +186,6 @@ public class JwtService {
     }
 
     // ==================== PRIVATE HELPER METHODS ====================
-
-    private boolean isTokenExpired(String token) {
-        return jwtTokenUtil.isTokenExpired(token);
-    }
-
-    private boolean isValidIssuer(String token) {
-        try {
-            String issuer = jwtTokenUtil.extractIssuer(token);
-            return jwtSecurityProperties.issuer().equals(issuer);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private boolean isValidAudience(String token) {
-        try {
-            String audience = jwtTokenUtil.extractAudience(token);
-            return jwtSecurityProperties.audience().equals(audience);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private boolean isValidTokenType(String token) {
-        try {
-            String tokenType = jwtTokenUtil.extractTokenType(token);
-            return "access".equals(tokenType);
-        } catch (Exception e) {
-            return false;
-        }
-    }
 
     private Key getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.secret());
