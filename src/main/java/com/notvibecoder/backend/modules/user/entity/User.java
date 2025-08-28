@@ -36,7 +36,9 @@ import java.util.Set;
         @CompoundIndex(name = "roles_enabled_idx",
                 def = "{'roles': 1, 'enabled': 1}"),
         @CompoundIndex(name = "created_updated_idx",
-                def = "{'createdAt': -1, 'updatedAt': -1}")
+                def = "{'createdAt': -1, 'updatedAt': -1}"),
+        @CompoundIndex(name = "purchased_courses_count_idx",
+                def = "{'purchasedCourseIds': 1, 'enabled': 1}")
 })
 public class User {
 
@@ -75,6 +77,11 @@ public class User {
     @Field("enabled")
     private Boolean enabled = true;
 
+    @Builder.Default
+    @Indexed
+    @Field("purchased_course_ids")
+    private Set<String> purchasedCourseIds = Set.of();
+
     @CreatedDate
     @Field("created_at")
     private Instant createdAt;
@@ -83,7 +90,6 @@ public class User {
     @Field("updated_at")
     private Instant updatedAt;
 
-    // Version field for optimistic locking
     @org.springframework.data.annotation.Version
     @Field("version")
     private Long version;
