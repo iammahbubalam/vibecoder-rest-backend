@@ -57,21 +57,8 @@ public class SecurityService {
                 .orElse(false);
     }
 
-    /**
-     * Check if current user is teacher
-     */
-    public boolean isTeacher() {
-        return getCurrentUser()
-                .map(user -> user.getRoles().contains(Role.TEACHER))
-                .orElse(false);
-    }
 
-    /**
-     * Check if current user is admin or teacher
-     */
-    public boolean isAdminOrTeacher() {
-        return isAdmin() || isTeacher();
-    }
+
 
     /**
      * Check if current user is the owner of a resource or admin
@@ -149,8 +136,7 @@ public class SecurityService {
      */
     public boolean canCreateCourses() {
         return getCurrentUser()
-                .map(user -> user.getRoles().contains(Role.TEACHER) || 
-                           user.getRoles().contains(Role.ADMIN))
+                .map(user -> user.getRoles().contains(Role.ADMIN))
                 .orElse(false);
     }
 

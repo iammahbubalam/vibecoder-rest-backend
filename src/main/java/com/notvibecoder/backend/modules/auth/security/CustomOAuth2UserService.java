@@ -180,7 +180,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .email(email)
                 .name(userInfo.getName())
                 .pictureUrl(userInfo.getImageUrl())
-                .provider(mapRegistrationIdToProvider(registrationId))
+                .provider(AuthProvider.google)
                 .providerId(userInfo.getId())
                 .roles(userRoles)
                 .enabled(true)  // New OAuth2 users are enabled by default
@@ -189,21 +189,4 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .build();
     }
 
-    /**
-     * Maps OAuth2 registration ID to internal AuthProvider enum.
-     */
-    private AuthProvider mapRegistrationIdToProvider(String registrationId) {
-        if (!StringUtils.hasText(registrationId)) {
-            log.warn("Empty registration ID, defaulting to google");
-            return AuthProvider.google;
-        }
-
-        return switch (registrationId.toLowerCase()) {
-            case "google" -> AuthProvider.google;
-            default -> {
-                log.warn("Unknown registration ID: {}, defaulting to google", registrationId);
-                yield AuthProvider.google;
-            }
-        };
-    }
 }

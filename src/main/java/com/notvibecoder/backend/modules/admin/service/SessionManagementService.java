@@ -21,14 +21,12 @@ public class SessionManagementService {
     public void revokeUserSessions(RefreshToken token) {
         token.setRevoked(true);
         refreshTokenRepository.save(token);
-        log.info("All sessions revoked for user: {}", token.getUserId());
+        log.info("Previous sessions revoked for user: {}", token.getUserId());
     }
 
     public void revokeUserSessions(String userId) {
         Optional<RefreshToken> activeToken = refreshTokenRepository.findActiveTokenByUserId(userId);
-        if (activeToken.isPresent()) {
-            revokeUserSessions(activeToken.get());
-        }
+        activeToken.ifPresent(this::revokeUserSessions);
     }
 
 
