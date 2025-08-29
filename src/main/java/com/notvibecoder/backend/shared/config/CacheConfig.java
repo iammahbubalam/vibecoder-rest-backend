@@ -16,18 +16,18 @@ import java.util.Arrays;
 @EnableCaching
 public class CacheConfig {
 
-      @Bean
+    @Bean
     @Primary
     public CacheManager cacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager();
         cacheManager.setCaffeine(defaultCaffeineConfig());
-        
+
         // Set ALL cache names with consistent configuration
         cacheManager.setCacheNames(Arrays.asList(
-            "users-by-email", 
-            "users-by-id", 
-            "blacklist", 
-            "tokens"
+                "users-by-email",
+                "users-by-id",
+                "blacklist",
+                "tokens"
         ));
         return cacheManager;
     }

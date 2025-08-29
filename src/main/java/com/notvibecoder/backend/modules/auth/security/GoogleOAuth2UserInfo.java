@@ -1,4 +1,4 @@
- package com.notvibecoder.backend.modules.auth.security;
+package com.notvibecoder.backend.modules.auth.security;
 
 import java.util.Map;
 

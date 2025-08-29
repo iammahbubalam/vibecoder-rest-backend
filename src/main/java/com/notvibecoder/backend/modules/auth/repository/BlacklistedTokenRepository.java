@@ -1,11 +1,10 @@
 package com.notvibecoder.backend.modules.auth.repository;
 
 import com.notvibecoder.backend.modules.auth.entity.BlacklistedToken;
-
-import java.time.Instant;
-
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
+
+import java.time.Instant;
 
 
 @Repository

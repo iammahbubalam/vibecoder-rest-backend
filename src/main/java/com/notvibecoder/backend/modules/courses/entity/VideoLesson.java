@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 @Data
@@ -13,10 +14,15 @@ import org.springframework.data.mongodb.core.mapping.Field;
 @AllArgsConstructor
 @NoArgsConstructor
 public class VideoLesson {
-    
+
     @NotBlank(message = "Title is required")
     @Field("title")
     private String title;
+
+    @Indexed
+    @NotBlank(message = "Course ID is required")
+    @Field("course_id")
+    private String courseId;
 
     @NotBlank(message = "YouTube URL is required")
     @Field("youtube_url")

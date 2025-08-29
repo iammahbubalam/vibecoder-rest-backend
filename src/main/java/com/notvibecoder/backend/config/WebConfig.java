@@ -19,14 +19,14 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
-        
+
         // Add CORS configuration for OAuth2 endpoints
         registry.addMapping("/oauth2/**")
                 .allowedOrigins(appProperties.cors().allowedOrigins())
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
-        
+
         registry.addMapping("/login/**")
                 .allowedOrigins(appProperties.cors().allowedOrigins())
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")

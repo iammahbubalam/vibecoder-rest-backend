@@ -1,8 +1,8 @@
 package com.notvibecoder.backend.modules.courses.entity;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +20,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Document(collection = "courses")
@@ -40,7 +41,7 @@ import java.util.List;
                 def = "{'price': 1, 'status': 1}")
 })
 public class Course {
-    
+
     @Id
     private String id;
 
@@ -82,17 +83,16 @@ public class Course {
     @Field("status")
     private CourseStatus status;
 
-    @Field("video_lessons")
-    private List<VideoLesson> videoLessons;
+    // Replace embedded videoLessons with just IDs
+    @Indexed
+    @Field("video_lesson_ids")
+    private List<String> videoLessonIds;
 
     @Field("what_you_will_learn")
     private List<String> whatYouWillLearn;
 
     @Field("requirements")
     private List<String> requirements;
-
-    @Field("target_audience")
-    private List<String> targetAudience;
 
     @Indexed
     @Builder.Default

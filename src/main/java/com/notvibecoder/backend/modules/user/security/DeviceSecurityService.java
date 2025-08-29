@@ -2,7 +2,6 @@ package com.notvibecoder.backend.modules.user.security;
 
 import com.notvibecoder.backend.core.dto.DeviceInfo;
 import com.notvibecoder.backend.modules.auth.entity.RefreshToken;
-
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

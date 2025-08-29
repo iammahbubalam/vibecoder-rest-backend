@@ -35,7 +35,7 @@ import java.util.Set;
                 def = "{'purchaseId': 1}")
 })
 public class LearningProgress {
-    
+
     @Id
     private String id;
 

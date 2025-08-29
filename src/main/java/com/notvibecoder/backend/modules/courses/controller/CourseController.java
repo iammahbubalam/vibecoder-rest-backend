@@ -1,13 +1,18 @@
 package com.notvibecoder.backend.modules.courses.controller;
 
 import com.notvibecoder.backend.core.dto.ApiResponse;
+import com.notvibecoder.backend.core.exception.ValidationException;
 import com.notvibecoder.backend.modules.admin.constants.SecurityConstants;
 import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
+import com.notvibecoder.backend.modules.courses.dto.CourseDTO;
 import com.notvibecoder.backend.modules.courses.entity.Course;
+import com.notvibecoder.backend.modules.courses.repository.CourseRepository;
 import com.notvibecoder.backend.modules.courses.service.CourseService;
-
+import com.notvibecoder.backend.modules.courses.utils.CourseConverter;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,7 +22,7 @@ import java.util.List;
 
 /**
  * Course Controller demonstrating centralized security configuration
- * 
+ * <p>
  * Shows best practices for different authorization levels:
  * - Public endpoints (no authentication)
  * - User endpoints (basic authentication)
@@ -31,13 +36,15 @@ import java.util.List;
 public class CourseController {
 
     private final CourseService courseService;
+    private final CourseConverter courseConverter;
 
-    // ==================== PUBLIC ENDPOINTS ====================
-    
+
+        // ==================== PUBLIC ENDPOINTS ====================
+
     /**
      * Public course browsing - no authentication required
      */
-    @GetMapping("/public")
+    @GetMapping("/")
     public ResponseEntity<ApiResponse<List<Course>>> getPublicCourses() {
         List<Course> courses = courseService.getPublishedCourses();
         return ResponseEntity.ok(ApiResponse.success("Public courses retrieved", courses));
@@ -46,14 +53,14 @@ public class CourseController {
     /**
      * Get course details - no authentication for public courses
      */
-    @GetMapping("/{courseId}/public")
+    @GetMapping("/{courseId}/")
     public ResponseEntity<ApiResponse<Course>> getPublicCourseDetails(@PathVariable String courseId) {
         Course course = courseService.getPublicCourseDetails(courseId);
         return ResponseEntity.ok(ApiResponse.success("Course details retrieved", course));
     }
 
     // ==================== USER ENDPOINTS ====================
-    
+
     /**
      * Get user's purchased courses - requires authentication
      */
@@ -64,7 +71,7 @@ public class CourseController {
         List<Course> courses = courseService.getUserCourses(principal.getId());
         return ResponseEntity.ok(ApiResponse.success("My courses retrieved", courses));
     }
-  
+
     /**
      * Access course content - requires course purchase or admin
      */
@@ -76,24 +83,31 @@ public class CourseController {
     }
 
     // ==================== TEACHER/ADMIN ENDPOINTS ====================
-    
+
     /**
      * Create new course - requires teacher or admin role
      */
-    @PostMapping
-    @PreAuthorize(SecurityConstants.CAN_CREATE_COURSES)
+    @PostMapping()
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<Course>> createCourse(
-            @RequestBody Course course,
-            @AuthenticationPrincipal UserPrincipal principal) {
-        Course createdCourse = courseService.createCourse(course, principal.getId());
-        return ResponseEntity.ok(ApiResponse.success("Course created successfully", createdCourse));
-    }
+           @Valid @RequestBody CourseDTO courseDTO, @AuthenticationPrincipal UserPrincipal principal) {
+
+            log.info("User {} is creating a course", principal.getUsername());
+            log.info("UserPrincipal: {}", principal.getAuthorities());
+        try {
+            Course courseEntity = courseConverter.convertToEntity(courseDTO);
+            Course createdCourse = courseService.createCourse(courseEntity);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Course created successfully", createdCourse));
+        } catch (ValidationException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Validation failed: " + e.getMessage(), e.getErrorCode()));
+        }}
 
     /**
      * Update course - requires ownership or admin
      */
     @PutMapping("/{courseId}")
-    @PreAuthorize("@securityService.canManageCourse(#courseId, #course.instructorId)")
     public ResponseEntity<ApiResponse<Course>> updateCourse(
             @PathVariable String courseId,
             @RequestBody Course course) {
@@ -105,31 +119,17 @@ public class CourseController {
      * Delete course - requires ownership or admin
      */
     @DeleteMapping("/{courseId}")
-    @PreAuthorize("@securityService.isAdmin() or @courseService.isInstructor(#courseId, authentication.principal.id)")
     public ResponseEntity<ApiResponse<Void>> deleteCourse(@PathVariable String courseId) {
         courseService.deleteCourse(courseId);
         return ResponseEntity.ok(ApiResponse.success("Course deleted successfully", null));
     }
 
     // ==================== ADMIN ONLY ENDPOINTS ====================
-    
-    /**
-     * Get all courses (including unpublished) - admin only
-     */
+
     @GetMapping("/admin/all")
-    @PreAuthorize(SecurityConstants.HAS_ROLE_ADMIN)
     public ResponseEntity<ApiResponse<List<Course>>> getAllCourses() {
         List<Course> courses = courseService.getAllCourses();
         return ResponseEntity.ok(ApiResponse.success("All courses retrieved", courses));
     }
 
-    /**
-     * Approve/publish course - admin only
-     */
-    @PostMapping("/{courseId}/approve")
-    @PreAuthorize(SecurityConstants.HAS_ROLE_ADMIN)
-    public ResponseEntity<ApiResponse<Course>> approveCourse(@PathVariable String courseId) {
-        Course course = courseService.approveCourse(courseId);
-        return ResponseEntity.ok(ApiResponse.success("Course approved successfully", course));
-    }
 }

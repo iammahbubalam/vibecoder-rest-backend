@@ -134,42 +134,42 @@ public class JwtService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(sessionBytes);
     }
 
-public boolean isTokenValid(String token) {
-    try {
-        // Check blacklist first (fastest check)
-        if (jwtBlacklistService.isTokenBlacklisted(token)) {
-            log.warn("Attempted use of blacklisted token");
+    public boolean isTokenValid(String token) {
+        try {
+            // Check blacklist first (fastest check)
+            if (jwtBlacklistService.isTokenBlacklisted(token)) {
+                log.warn("Attempted use of blacklisted token");
+                return false;
+            }
+
+            // Check expiration using extractClaim method
+            Date expiration = extractClaim(token, Claims::getExpiration);
+            if (expiration.before(new Date())) {
+                log.debug("Token is expired");
+                return false;
+            }
+
+            // Verify issuer using extractClaim method
+            String issuer = extractClaim(token, Claims::getIssuer);
+            if (!jwtSecurityProperties.issuer().equals(issuer)) {
+                return false;
+            }
+
+            // Verify audience using extractClaim method
+            String audience = extractClaim(token, Claims::getAudience);
+            if (!jwtSecurityProperties.audience().equals(audience)) {
+                return false;
+            }
+
+            // Verify token type using extractClaim method
+            String tokenType = extractClaim(token, claims -> claims.get("tokenType", String.class));
+            return "access".equals(tokenType);
+
+        } catch (Exception e) {
+            log.error("Token validation error: {}", e.getMessage());
             return false;
         }
-
-        // Check expiration using extractClaim method
-        Date expiration = extractClaim(token, Claims::getExpiration);
-        if (expiration.before(new Date())) {
-            log.debug("Token is expired");
-            return false;
-        }
-
-        // Verify issuer using extractClaim method
-        String issuer = extractClaim(token, Claims::getIssuer);
-        if (!jwtSecurityProperties.issuer().equals(issuer)) {
-            return false;
-        }
-
-        // Verify audience using extractClaim method
-        String audience = extractClaim(token, Claims::getAudience);
-        if (!jwtSecurityProperties.audience().equals(audience)) {
-            return false;
-        }
-
-        // Verify token type using extractClaim method
-        String tokenType = extractClaim(token, claims -> claims.get("tokenType", String.class));
-        return "access".equals(tokenType);
-
-    } catch (Exception e) {
-        log.error("Token validation error: {}", e.getMessage());
-        return false;
     }
-}
 
     // ==================== BLACKLIST OPERATIONS (DELEGATION) ====================
 

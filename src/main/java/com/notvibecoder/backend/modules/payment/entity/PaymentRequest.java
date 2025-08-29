@@ -36,7 +36,7 @@ import java.time.Instant;
                 def = "{'courseId': 1, 'amount': 1}")
 })
 public class PaymentRequest {
-    
+
     @Id
     private String id;
 

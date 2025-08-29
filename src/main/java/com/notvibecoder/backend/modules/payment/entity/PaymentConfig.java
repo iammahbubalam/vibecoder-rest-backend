@@ -19,7 +19,7 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PaymentConfig {
-    
+
     @Id
     private String id;
 

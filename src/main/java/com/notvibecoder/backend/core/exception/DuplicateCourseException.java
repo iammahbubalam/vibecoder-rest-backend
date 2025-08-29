@@ -1,4 +1,11 @@
 package com.notvibecoder.backend.core.exception;
 
-public class DuplicateCourseException {
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(HttpStatus.BAD_REQUEST)
+public class DuplicateCourseException extends RuntimeException {
+    public DuplicateCourseException(String message) {
+        super(message);
+    }
 }

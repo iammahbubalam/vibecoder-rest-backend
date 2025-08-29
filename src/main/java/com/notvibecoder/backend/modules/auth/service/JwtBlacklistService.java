@@ -2,7 +2,6 @@ package com.notvibecoder.backend.modules.auth.service;
 
 import com.notvibecoder.backend.modules.auth.entity.BlacklistedToken;
 import com.notvibecoder.backend.modules.auth.repository.BlacklistedTokenRepository;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -20,7 +19,7 @@ public class JwtBlacklistService {
     private final BlacklistedTokenRepository blacklistedTokenRepository;
     private final JwtTokenUtil jwtTokenUtil;
 
-@CacheEvict(value = "blacklist", key = "#token")
+    @CacheEvict(value = "blacklist", key = "#token")
     public void blacklistToken(String token, String reason) {
         try {
             String jwtId = jwtTokenUtil.extractJwtId(token);
@@ -45,7 +44,7 @@ public class JwtBlacklistService {
         }
     }
 
-        @Cacheable(value = "blacklist", key = "#token")
+    @Cacheable(value = "blacklist", key = "#token")
     public boolean isTokenBlacklisted(String token) {
         try {
             String jwtId = jwtTokenUtil.extractJwtId(token);

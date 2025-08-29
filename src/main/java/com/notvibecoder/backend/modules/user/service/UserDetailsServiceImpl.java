@@ -1,8 +1,8 @@
 package com.notvibecoder.backend.modules.user.service;
 
+import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
 import com.notvibecoder.backend.modules.user.entity.User;
 import com.notvibecoder.backend.modules.user.repository.UserRepository;
-import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

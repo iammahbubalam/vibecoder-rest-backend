@@ -31,7 +31,7 @@ import java.util.Map;
                 def = "{'type': 1, 'createdAt': -1}")
 })
 public class Notification {
-    
+
     @Id
     private String id;
 

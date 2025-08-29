@@ -1,12 +1,11 @@
 package com.notvibecoder.backend.modules.auth.security;
 
+import com.notvibecoder.backend.core.exception.OAuth2AuthenticationProcessingException;
 import com.notvibecoder.backend.modules.admin.service.AdminService;
 import com.notvibecoder.backend.modules.auth.entity.AuthProvider;
 import com.notvibecoder.backend.modules.user.entity.Role;
 import com.notvibecoder.backend.modules.user.entity.User;
-import com.notvibecoder.backend.core.exception.OAuth2AuthenticationProcessingException;
 import com.notvibecoder.backend.modules.user.repository.UserRepository;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -124,13 +123,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         return userRepository.findByEmail(email)
                 .map(existingUser -> {
                     log.debug("Found existing user: {}", email);
-                    
+
                     // Check if existing user should be upgraded to admin
                     if (adminService.upgradeToAdminIfEligible(existingUser)) {
                         log.info("Upgrading existing user to admin: {}", email);
                         return userRepository.save(existingUser);
                     }
-                    
+
                     return existingUser;
                 })
                 .orElseGet(() -> createNewUser(userInfo, registrationId));
