@@ -6,10 +6,13 @@ import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "app")
 @Validated
-public record AppProperties(Oauth2 oauth2, Cors cors) {
+public record AppProperties(Oauth2 oauth2, Cors cors, Admin admin) {
     public record Oauth2(@NotEmpty String redirectUri) {
     }
 
     public record Cors(@NotEmpty String[] allowedOrigins) {
+    }
+
+    public record Admin(@NotEmpty String[] emails) {
     }
 }

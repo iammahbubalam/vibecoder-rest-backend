@@ -37,7 +37,7 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)  // ✅ Allow sessions for OAuth2
+                        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)  // ✅ Always create sessions for OAuth2
                         .maximumSessions(1)  // Single session per user
                         .maxSessionsPreventsLogin(false)  // Allow new login to invalidate old session
                         .sessionRegistry(sessionRegistry())  // Register session registry
@@ -57,14 +57,16 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**", "/oauth2/**", "/login/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/oauth2/**", "/login/**", "/api/v1/debug/**").permitAll()
                         .requestMatchers("/api/v1/**").authenticated()  // ✅ Explicitly handle API routes
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(endpoint -> endpoint
-                                        .baseUri("/oauth2/authorize")
-                                // ✅ Use default session-based storage (works with IF_REQUIRED sessions)
+                                .baseUri("/oauth2/authorize")
+                        )
+                        .redirectionEndpoint(redirection -> redirection
+                                .baseUri("/login/oauth2/code/*")
                         )
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
@@ -72,7 +74,7 @@ public class SecurityConfig {
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                         .failureHandler((request, response, exception) -> {
                             log.warn("OAuth2 authentication failed", exception);
-                            response.sendRedirect("http://localhost:3000/login?error=oauth2_failed");  // ✅ Redirect to frontend
+                            response.sendRedirect("http://localhost:3000/login?error=oauth2_failed");
                         })
                 )
                 .addFilterBefore(rateLimitingFilter, OAuth2LoginAuthenticationFilter.class)

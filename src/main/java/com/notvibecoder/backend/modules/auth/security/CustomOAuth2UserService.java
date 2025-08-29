@@ -1,5 +1,6 @@
 package com.notvibecoder.backend.modules.auth.security;
 
+import com.notvibecoder.backend.modules.admin.service.AdminService;
 import com.notvibecoder.backend.modules.auth.entity.AuthProvider;
 import com.notvibecoder.backend.modules.user.entity.Role;
 import com.notvibecoder.backend.modules.user.entity.User;
@@ -18,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.Instant;
-import java.util.Collections;
+import java.util.Set;
 
 /**
  * Custom OAuth2 User Service that processes OAuth2 users and creates UserPrincipal objects.
@@ -35,6 +36,7 @@ import java.util.Collections;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
+    private final AdminService adminService;
 
     @Override
     @Transactional
@@ -122,6 +124,13 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         return userRepository.findByEmail(email)
                 .map(existingUser -> {
                     log.debug("Found existing user: {}", email);
+                    
+                    // Check if existing user should be upgraded to admin
+                    if (adminService.upgradeToAdminIfEligible(existingUser)) {
+                        log.info("Upgrading existing user to admin: {}", email);
+                        return userRepository.save(existingUser);
+                    }
+                    
                     return existingUser;
                 })
                 .orElseGet(() -> createNewUser(userInfo, registrationId));
@@ -162,14 +171,18 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
      */
     private User buildNewUser(OAuth2UserInfo userInfo, String registrationId) {
         Instant now = Instant.now();
+        String email = userInfo.getEmail();
+
+        // Determine user roles based on email (admin emails get ADMIN role)
+        Set<Role> userRoles = adminService.determineUserRoles(email);
 
         return User.builder()
-                .email(userInfo.getEmail())
+                .email(email)
                 .name(userInfo.getName())
                 .pictureUrl(userInfo.getImageUrl())
                 .provider(mapRegistrationIdToProvider(registrationId))
                 .providerId(userInfo.getId())
-                .roles(Collections.singleton(Role.USER))
+                .roles(userRoles)
                 .enabled(true)  // New OAuth2 users are enabled by default
                 .createdAt(now)
                 .updatedAt(now)
