@@ -6,7 +6,6 @@ import com.notvibecoder.backend.modules.admin.constants.SecurityConstants;
 import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
 import com.notvibecoder.backend.modules.courses.dto.CourseDTO;
 import com.notvibecoder.backend.modules.courses.entity.Course;
-import com.notvibecoder.backend.modules.courses.repository.CourseRepository;
 import com.notvibecoder.backend.modules.courses.service.CourseService;
 import com.notvibecoder.backend.modules.courses.utils.CourseConverter;
 import jakarta.validation.Valid;
@@ -39,7 +38,7 @@ public class CourseController {
     private final CourseConverter courseConverter;
 
 
-        // ==================== PUBLIC ENDPOINTS ====================
+    // ==================== PUBLIC ENDPOINTS ====================
 
     /**
      * Public course browsing - no authentication required
@@ -90,10 +89,10 @@ public class CourseController {
     @PostMapping()
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<Course>> createCourse(
-           @Valid @RequestBody CourseDTO courseDTO, @AuthenticationPrincipal UserPrincipal principal) {
+            @Valid @RequestBody CourseDTO courseDTO, @AuthenticationPrincipal UserPrincipal principal) {
 
-            log.info("User {} is creating a course", principal.getUsername());
-            log.info("UserPrincipal: {}", principal.getAuthorities());
+        log.info("User {} is creating a course", principal.getUsername());
+        log.info("UserPrincipal: {}", principal.getAuthorities());
         try {
             Course courseEntity = courseConverter.convertToEntity(courseDTO);
             Course createdCourse = courseService.createCourse(courseEntity);
@@ -102,7 +101,8 @@ public class CourseController {
         } catch (ValidationException e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Validation failed: " + e.getMessage(), e.getErrorCode()));
-        }}
+        }
+    }
 
     /**
      * Update course - requires ownership or admin
