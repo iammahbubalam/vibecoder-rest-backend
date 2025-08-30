@@ -5,6 +5,7 @@ import com.notvibecoder.backend.core.exception.ValidationException;
 import com.notvibecoder.backend.modules.admin.constants.SecurityConstants;
 import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
 import com.notvibecoder.backend.modules.courses.entity.Course;
+import com.notvibecoder.backend.modules.courses.entity.VideoLesson;
 import com.notvibecoder.backend.modules.courses.service.CourseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -68,9 +69,7 @@ public class CourseController {
         return ResponseEntity.ok(ApiResponse.success("My courses retrieved", courses));
     }
 
-    /**
-     * Access course content - requires course purchase or admin
-     */
+
     @GetMapping("/{courseId}/content")
     @PreAuthorize(SecurityConstants.CAN_ACCESS_COURSE)
     public ResponseEntity<ApiResponse<Course>> getCourseContent(@PathVariable String courseId) {
@@ -78,11 +77,30 @@ public class CourseController {
         return ResponseEntity.ok(ApiResponse.success("Course content retrieved", course));
     }
 
-    // ==================== TEACHER/ADMIN ENDPOINTS ====================
 
-    /**
-     * Create new course - requires teacher or admin role
-     */
+    @PostMapping("/{courseId}/lessons")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<List<VideoLesson>>> createVideoLessons(
+            @PathVariable String courseId,
+            @Valid @RequestBody List<VideoLesson> lessons,
+            @AuthenticationPrincipal java.nio.file.attribute.UserPrincipal principal) {
+
+        log.info("User {} is creating {} video lessons for course: {}",
+                principal.getName(), lessons.size(), courseId);
+        try {
+            List<VideoLesson> createdLessons = courseService.createVideoLesson(courseId, lessons);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Video lessons created successfully", createdLessons));
+        } catch (IllegalArgumentException e) {
+            log.warn("Validation error creating video lessons for course {}: {}", courseId, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Validation failed: " + e.getMessage(), "VALIDATION_ERROR"));
+        } catch (RuntimeException e) {
+            log.error("Error creating video lessons for course {}: {}", courseId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to create video lessons", "CREATION_ERROR"));
+        }
+    }
     @PostMapping()
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<Course>> createCourse(

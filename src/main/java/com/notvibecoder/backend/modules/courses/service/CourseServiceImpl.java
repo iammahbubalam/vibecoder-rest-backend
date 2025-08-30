@@ -4,6 +4,7 @@ import com.notvibecoder.backend.core.exception.CourseCreationException;
 import com.notvibecoder.backend.core.exception.ValidationException;
 import com.notvibecoder.backend.modules.courses.entity.Course;
 import com.notvibecoder.backend.modules.courses.entity.CourseStatus;
+import com.notvibecoder.backend.modules.courses.entity.VideoLesson;
 import com.notvibecoder.backend.modules.courses.repository.CourseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,77 +62,56 @@ public class CourseServiceImpl implements CourseService {
             log.error("Failed to create course: {}", e.getMessage());
             throw new CourseCreationException("Failed to create course", e);
         }
-    }
-@Override
-@Transactional
-public Course updateCourse(String courseId, Course course) {
-    // Input validation
-    if (courseId == null || courseId.trim().isEmpty()) {
-        throw new ValidationException("Course ID cannot be null or empty");
-    }
-
-    if (course == null) {
-        throw new ValidationException("Course data cannot be null");
-    }
-
-    if (course.getPrice() != null && course.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-        throw new ValidationException("Price cannot be negative");
-    }
-
-    try {
-        // Fetch existing course first
-        Course existingCourse = courseRepository.findById(courseId)
-                .orElseThrow(() -> new ValidationException("Course not found with ID: " + courseId));
-
-        // Get current video lessons for this course
-        var videoLessons = videoLessonService.getAllLessonsByCourseId(courseId);
-        List<String> videoLessonIds;
-        
-        if (videoLessons.isEmpty()) {
-            log.warn("No video lessons found for course ID: {}", courseId);
-            videoLessonIds = List.of();
-        } else {
-            // Extract IDs from existing video lessons
-            videoLessonIds = videoLessons.stream()
-                .map(lesson -> lesson.getId())
-                .toList();
-            log.info("Found {} existing video lessons for course {}", videoLessons.size(), courseId);
+        }
+    @Override
+    @Transactional
+    public Course updateCourse(String courseId, Course course) {
+        // Input validation
+        if (courseId == null || courseId.trim().isEmpty()) {
+            throw new ValidationException("Course ID cannot be null or empty");
         }
 
-        // Update course fields with null-safe operations
-        updateCourseFields(existingCourse, course);
-        
-        // Update video lesson references
-        existingCourse.setVideoLessonIds(videoLessonIds);
-        existingCourse.setTotalLessons(videoLessonIds.size());
-        
-        // Calculate total duration from video lessons
-        int totalDuration = videoLessons.stream()
-            .filter(lesson -> lesson.getDurationMinutes() != null)
-            .mapToInt(lesson -> lesson.getDurationMinutes())
-            .sum();
-        existingCourse.setTotalDurationMinutes(totalDuration > 0 ? totalDuration : course.getTotalDurationMinutes());
+        if (course == null) {
+            throw new ValidationException("Course data cannot be null");
+        }
 
-        // Set update timestamp
-        existingCourse.setUpdatedAt(Instant.now());
+        if (course.getPrice() != null && course.getPrice().compareTo(BigDecimal.ZERO) < 0) {
+            throw new ValidationException("Price cannot be negative");
+        }
 
-        // Save and return updated course
-        Course updatedCourse = courseRepository.save(existingCourse);
-        log.info("Course updated successfully with ID: {}, Total lessons: {}, Total duration: {} minutes", 
-                updatedCourse.getId(), updatedCourse.getTotalLessons(), updatedCourse.getTotalDurationMinutes());
-        
-        return updatedCourse;
+        try {
+            // Fetch existing course first
+            Course existingCourse = courseRepository.findById(courseId)
+                    .orElseThrow(() -> new ValidationException("Course not found with ID: " + courseId));
 
-    } catch (DataAccessException e) {
-        log.error("Failed to update course with ID {}: {}", courseId, e.getMessage());
-        throw new CourseCreationException("Failed to update course", e);
-    } catch (Exception e) {
-        log.error("Unexpected error while updating course with ID {}: {}", courseId, e.getMessage());
-        throw new CourseCreationException("Unexpected error occurred while updating course", e);
+            // Update course fields with null-safe operations
+            updateCourseFields(existingCourse, course);
+            // Set update timestamp
+            existingCourse.setUpdatedAt(Instant.now());
+
+            // Save and return updated course
+            Course updatedCourse = courseRepository.save(existingCourse);
+            log.info("Course updated successfully with ID: {}, Total lessons: {}, Total duration: {} minutes",
+                    updatedCourse.getId(), updatedCourse.getTotalLessons(), updatedCourse.getTotalDurationMinutes());
+
+            return updatedCourse;
+
+        } catch (DataAccessException e) {
+            log.error("Failed to update course with ID {}: {}", courseId, e.getMessage());
+            throw new CourseCreationException("Failed to update course", e);
+        } catch (Exception e) {
+            log.error("Unexpected error while updating course with ID {}: {}", courseId, e.getMessage());
+            throw new CourseCreationException("Unexpected error occurred while updating course", e);
+        }
     }
-}
 
-@Override
+    @Override
+    public List<VideoLesson> createVideoLesson(String courseId, List<VideoLesson> lessons) {
+
+        return  videoLessonService.creatVideoLesson(courseId,lessons);
+    }
+
+    @Override
 public void deleteCourse(String courseId) {
     try {
         courseRepository.deleteById(courseId);
