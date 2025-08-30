@@ -20,6 +20,7 @@ import java.util.List;
 @Slf4j
 public class CourseServiceImpl implements CourseService {
     private final CourseRepository courseRepository;
+    private final VideoLessonService videoLessonService;
 
     @Override
     public List<Course> getPublishedCourses() {
@@ -61,20 +62,152 @@ public class CourseServiceImpl implements CourseService {
             throw new CourseCreationException("Failed to create course", e);
         }
     }
-
-    @Override
-    public Course updateCourse(String courseId, Course course) {
-        return null;
+@Override
+@Transactional
+public Course updateCourse(String courseId, Course course) {
+    // Input validation
+    if (courseId == null || courseId.trim().isEmpty()) {
+        throw new ValidationException("Course ID cannot be null or empty");
     }
 
-    @Override
-    public void deleteCourse(String courseId) {
-
+    if (course == null) {
+        throw new ValidationException("Course data cannot be null");
     }
 
-    @Override
-    public List<Course> getAllCourses() {
-        return List.of();
+    if (course.getPrice() != null && course.getPrice().compareTo(BigDecimal.ZERO) < 0) {
+        throw new ValidationException("Price cannot be negative");
     }
+
+    try {
+        // Fetch existing course first
+        Course existingCourse = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ValidationException("Course not found with ID: " + courseId));
+
+        // Get current video lessons for this course
+        var videoLessons = videoLessonService.getAllLessonsByCourseId(courseId);
+        List<String> videoLessonIds;
+        
+        if (videoLessons.isEmpty()) {
+            log.warn("No video lessons found for course ID: {}", courseId);
+            videoLessonIds = List.of();
+        } else {
+            // Extract IDs from existing video lessons
+            videoLessonIds = videoLessons.stream()
+                .map(lesson -> lesson.getId())
+                .toList();
+            log.info("Found {} existing video lessons for course {}", videoLessons.size(), courseId);
+        }
+
+        // Update course fields with null-safe operations
+        updateCourseFields(existingCourse, course);
+        
+        // Update video lesson references
+        existingCourse.setVideoLessonIds(videoLessonIds);
+        existingCourse.setTotalLessons(videoLessonIds.size());
+        
+        // Calculate total duration from video lessons
+        int totalDuration = videoLessons.stream()
+            .filter(lesson -> lesson.getDurationMinutes() != null)
+            .mapToInt(lesson -> lesson.getDurationMinutes())
+            .sum();
+        existingCourse.setTotalDurationMinutes(totalDuration > 0 ? totalDuration : course.getTotalDurationMinutes());
+
+        // Set update timestamp
+        existingCourse.setUpdatedAt(Instant.now());
+
+        // Save and return updated course
+        Course updatedCourse = courseRepository.save(existingCourse);
+        log.info("Course updated successfully with ID: {}, Total lessons: {}, Total duration: {} minutes", 
+                updatedCourse.getId(), updatedCourse.getTotalLessons(), updatedCourse.getTotalDurationMinutes());
+        
+        return updatedCourse;
+
+    } catch (DataAccessException e) {
+        log.error("Failed to update course with ID {}: {}", courseId, e.getMessage());
+        throw new CourseCreationException("Failed to update course", e);
+    } catch (Exception e) {
+        log.error("Unexpected error while updating course with ID {}: {}", courseId, e.getMessage());
+        throw new CourseCreationException("Unexpected error occurred while updating course", e);
+    }
+}
+
+@Override
+public void deleteCourse(String courseId) {
+    try {
+        courseRepository.deleteById(courseId);
+        log.info("Course deleted successfully with ID: {}", courseId);
+    } catch (DataAccessException e) {
+        log.error("Failed to delete course with ID {}: {}", courseId, e.getMessage());
+        throw new CourseCreationException("Failed to delete course", e);
+    } catch (Exception e) {
+        log.error("Unexpected error while deleting course with ID {}: {}", courseId, e.getMessage());
+        throw new CourseCreationException("Unexpected error occurred while deleting course", e);
+    }
+}
+
+@Override
+public List<Course> getAllCourses() {
+    try {
+        return courseRepository.findAll();
+    } catch (DataAccessException e) {
+        log.error("Failed to retrieve all courses: {}", e.getMessage());
+        throw new CourseCreationException("Failed to retrieve all courses", e);
+    } catch (Exception e) {
+        log.error("Unexpected error while retrieving all courses: {}", e.getMessage());
+        throw new CourseCreationException("Unexpected error occurred while retrieving all courses", e);
+    }
+}
+
+
+private void updateCourseFields(Course existingCourse, Course updatedCourse) {
+    // Only update fields that are not null in the incoming course
+    if (updatedCourse.getTitle() != null) {
+        existingCourse.setTitle(updatedCourse.getTitle());
+    }
+    
+    if (updatedCourse.getDescription() != null) {
+        existingCourse.setDescription(updatedCourse.getDescription());
+    }
+    
+    if (updatedCourse.getShortDescription() != null) {
+        existingCourse.setShortDescription(updatedCourse.getShortDescription());
+    }
+    
+    if (updatedCourse.getInstructorName() != null) {
+        existingCourse.setInstructorName(updatedCourse.getInstructorName());
+    }
+    
+    if (updatedCourse.getPrice() != null) {
+        existingCourse.setPrice(updatedCourse.getPrice());
+    }
+    
+    if (updatedCourse.getThumbnailUrl() != null) {
+        existingCourse.setThumbnailUrl(updatedCourse.getThumbnailUrl());
+    }
+    
+    if (updatedCourse.getPreviewVideoUrl() != null) {
+        existingCourse.setPreviewVideoUrl(updatedCourse.getPreviewVideoUrl());
+    }
+    
+    if (updatedCourse.getStatus() != null) {
+        existingCourse.setStatus(updatedCourse.getStatus());
+    }
+    
+    if (updatedCourse.getWhatYouWillLearn() != null) {
+        existingCourse.setWhatYouWillLearn(updatedCourse.getWhatYouWillLearn());
+    }
+    
+    if (updatedCourse.getRequirements() != null) {
+        existingCourse.setRequirements(updatedCourse.getRequirements());
+    }
+    
+    if (updatedCourse.getCategory() != null) {
+        existingCourse.setCategory(updatedCourse.getCategory());
+    }
+    
+    if (updatedCourse.getTags() != null) {
+        existingCourse.setTags(updatedCourse.getTags());
+    }
+}
 
 }

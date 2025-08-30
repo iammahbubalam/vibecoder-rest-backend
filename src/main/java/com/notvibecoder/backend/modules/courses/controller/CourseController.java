@@ -4,10 +4,8 @@ import com.notvibecoder.backend.core.dto.ApiResponse;
 import com.notvibecoder.backend.core.exception.ValidationException;
 import com.notvibecoder.backend.modules.admin.constants.SecurityConstants;
 import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
-import com.notvibecoder.backend.modules.courses.dto.CourseDTO;
 import com.notvibecoder.backend.modules.courses.entity.Course;
 import com.notvibecoder.backend.modules.courses.service.CourseService;
-import com.notvibecoder.backend.modules.courses.utils.CourseConverter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +33,6 @@ import java.util.List;
 public class CourseController {
 
     private final CourseService courseService;
-    private final CourseConverter courseConverter;
 
 
     // ==================== PUBLIC ENDPOINTS ====================
@@ -89,13 +86,12 @@ public class CourseController {
     @PostMapping()
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<Course>> createCourse(
-            @Valid @RequestBody CourseDTO courseDTO, @AuthenticationPrincipal UserPrincipal principal) {
+            @Valid @RequestBody Course Course, @AuthenticationPrincipal UserPrincipal principal) {
 
         log.info("User {} is creating a course", principal.getUsername());
         log.info("UserPrincipal: {}", principal.getAuthorities());
         try {
-            Course courseEntity = courseConverter.convertToEntity(courseDTO);
-            Course createdCourse = courseService.createCourse(courseEntity);
+            Course createdCourse = courseService.createCourse(Course);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Course created successfully", createdCourse));
         } catch (ValidationException e) {

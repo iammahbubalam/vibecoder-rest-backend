@@ -15,6 +15,7 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.index.TextIndexed;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -82,7 +83,8 @@ public class Course {
     @Field("status")
     private CourseStatus status;
 
-    // Replace embedded videoLessons with just IDs
+
+    // Keep IDs for performance queries when you don't need full objects
     @Indexed
     @Field("video_lesson_ids")
     private List<String> videoLessonIds;
