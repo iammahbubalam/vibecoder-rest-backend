@@ -79,7 +79,6 @@ public class Course {
     private String previewVideoUrl;
 
     @Indexed
-    @NotNull(message = "Status is required")
     @Field("status")
     private CourseStatus status;
 

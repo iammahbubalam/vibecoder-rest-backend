@@ -83,7 +83,7 @@ public class CourseController {
     public ResponseEntity<ApiResponse<List<VideoLesson>>> createVideoLessons(
             @PathVariable String courseId,
             @Valid @RequestBody List<VideoLesson> lessons,
-            @AuthenticationPrincipal java.nio.file.attribute.UserPrincipal principal) {
+            @AuthenticationPrincipal UserPrincipal principal) {
 
         log.info("User {} is creating {} video lessons for course: {}",
                 principal.getName(), lessons.size(), courseId);
@@ -125,6 +125,7 @@ public class CourseController {
     public ResponseEntity<ApiResponse<Course>> updateCourse(
             @PathVariable String courseId,
             @RequestBody Course course) {
+        log.info("Updating course with ID: {}", courseId);
         Course updatedCourse = courseService.updateCourse(courseId, course);
         return ResponseEntity.ok(ApiResponse.success("Course updated successfully", updatedCourse));
     }
