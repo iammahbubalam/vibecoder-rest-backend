@@ -106,9 +106,20 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
+    @Transactional
     public List<VideoLesson> createVideoLesson(String courseId, List<VideoLesson> lessons) {
 
-        return  videoLessonService.creatVideoLesson(courseId,lessons);
+        var videoLessons = videoLessonService.createVideoLesson(courseId, lessons);
+        log.info("Video lessons created successfully for course ID: {}", courseId);
+        var course = courseRepository.findById(courseId);
+        course.ifPresent(c -> {
+            c.setTotalLessons(videoLessons.size());
+            c.setTotalDurationMinutes(videoLessons.stream().mapToInt(VideoLesson::getDurationMinutes).sum());
+            c.setUpdatedAt(Instant.now());
+            c.setVideoLessonIds(videoLessons.stream().map(VideoLesson::getId).toList());
+        });
+        courseRepository.save(course.get());
+        return videoLessons;
     }
 
     @Override

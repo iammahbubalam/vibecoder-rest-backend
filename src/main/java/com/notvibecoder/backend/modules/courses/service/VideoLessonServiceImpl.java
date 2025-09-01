@@ -21,7 +21,7 @@ public class VideoLessonServiceImpl implements VideoLessonService {
 
 
     @Override
-    public List<VideoLesson> creatVideoLesson(String courseId , List<VideoLesson> lessons) {
+    public List<VideoLesson> createVideoLesson(String courseId , List<VideoLesson> lessons) {
         log.info("Creating {} video lessons for course: {}", lessons.size(), courseId);
 
         // Validate course ID
