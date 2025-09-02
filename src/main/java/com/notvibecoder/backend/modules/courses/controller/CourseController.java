@@ -101,6 +101,7 @@ public class CourseController {
                     .body(ApiResponse.error("Failed to create video lessons", "CREATION_ERROR"));
         }
     }
+
     @PostMapping()
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<Course>> createCourse(

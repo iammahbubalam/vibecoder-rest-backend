@@ -20,7 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class CourseServiceImpl implements CourseService {
-    
+
     private final CourseRepository courseRepository;
     private final VideoLessonService videoLessonService;
 
@@ -64,8 +64,8 @@ public class CourseServiceImpl implements CourseService {
             log.error("Failed to create course: {}", e.getMessage());
             throw new CourseCreationException("Failed to create course", e);
         }
-        }
-   
+    }
+
     @Override
     @Transactional
     public Course updateCourse(String courseId, Course course) {
@@ -111,127 +111,126 @@ public class CourseServiceImpl implements CourseService {
     @Override
     @Transactional
     public List<VideoLesson> createVideoLesson(String courseId, List<VideoLesson> lessons) {
-
-        var videoLessons = videoLessonService.createVideoLesson(courseId, lessons);
-        log.info("Video lessons created successfully for course ID: {}", courseId);
-        var course = courseRepository.findById(courseId);
-        course.ifPresent(c -> {
-            c.setTotalLessons(videoLessons.size());
-            c.setTotalDurationMinutes(videoLessons.stream().mapToInt(VideoLesson::getDurationMinutes).sum());
-            c.setUpdatedAt(Instant.now());
-            c.setVideoLessonIds(videoLessons.stream().map(VideoLesson::getId).toList());
-        });
-        courseRepository.save(course.get());
-        return videoLessons;
+        return courseRepository.findById(courseId)
+                .map(c -> {
+                    List<VideoLesson> createdLessons = videoLessonService.createVideoLesson(c.getId(), lessons);
+                    c.setTotalLessons(createdLessons.size());
+                    c.setTotalDurationMinutes(createdLessons.stream().mapToInt(VideoLesson::getDurationMinutes).sum());
+                    c.setUpdatedAt(Instant.now());
+                    c.setVideoLessonIds(createdLessons.stream().map(VideoLesson::getId).toList());
+                    courseRepository.save(c);
+                    return createdLessons;
+                })
+                .orElseThrow(() -> new ValidationException("Course not found with ID: " + courseId));
     }
 
     @Override
-public void deleteCourse(String courseId) {
-    try {
-        courseRepository.deleteById(courseId);
-        log.info("Course deleted successfully with ID: {}", courseId);
-    } catch (DataAccessException e) {
-        log.error("Failed to delete course with ID {}: {}", courseId, e.getMessage());
-        throw new CourseCreationException("Failed to delete course", e);
-    } catch (Exception e) {
-        log.error("Unexpected error while deleting course with ID {}: {}", courseId, e.getMessage());
-        throw new CourseCreationException("Unexpected error occurred while deleting course", e);
+    public void deleteCourse(String courseId) {
+        try {
+            courseRepository.deleteById(courseId);
+            log.info("Course deleted successfully with ID: {}", courseId);
+        } catch (DataAccessException e) {
+            log.error("Failed to delete course with ID {}: {}", courseId, e.getMessage());
+            throw new CourseCreationException("Failed to delete course", e);
+        } catch (Exception e) {
+            log.error("Unexpected error while deleting course with ID {}: {}", courseId, e.getMessage());
+            throw new CourseCreationException("Unexpected error occurred while deleting course", e);
+        }
     }
-}
 
-@Override
-public List<Course> getAllCourses() {
-    try {
-        return courseRepository.findAll();
-    } catch (DataAccessException e) {
-        log.error("Failed to retrieve all courses: {}", e.getMessage());
-        throw new CourseCreationException("Failed to retrieve all courses", e);
-    } catch (Exception e) {
-        log.error("Unexpected error while retrieving all courses: {}", e.getMessage());
-        throw new CourseCreationException("Unexpected error occurred while retrieving all courses", e);
+    @Override
+    public List<Course> getAllCourses() {
+        try {
+            return courseRepository.findAll();
+        } catch (DataAccessException e) {
+            log.error("Failed to retrieve all courses: {}", e.getMessage());
+            throw new CourseCreationException("Failed to retrieve all courses", e);
+        } catch (Exception e) {
+            log.error("Unexpected error while retrieving all courses: {}", e.getMessage());
+            throw new CourseCreationException("Unexpected error occurred while retrieving all courses", e);
+        }
     }
-}
 
 
-private void updateCourseFields(Course existingCourse, Course updatedCourse) {
-    // Only update fields that are not null in the incoming course
-    if (updatedCourse.getTitle() != null) {
-        existingCourse.setTitle(updatedCourse.getTitle());
-    }
-    
-    if (updatedCourse.getDescription() != null) {
-        existingCourse.setDescription(updatedCourse.getDescription());
-    }
-    
-    if (updatedCourse.getShortDescription() != null) {
-        existingCourse.setShortDescription(updatedCourse.getShortDescription());
-    }
-    
-    if (updatedCourse.getInstructorName() != null) {
-        existingCourse.setInstructorName(updatedCourse.getInstructorName());
-    }
-    
-    if (updatedCourse.getPrice() != null) {
-        existingCourse.setPrice(updatedCourse.getPrice());
-    }
-    
-    if (updatedCourse.getThumbnailUrl() != null) {
-        existingCourse.setThumbnailUrl(updatedCourse.getThumbnailUrl());
-    }
-    
-    if (updatedCourse.getPreviewVideoUrl() != null) {
-        existingCourse.setPreviewVideoUrl(updatedCourse.getPreviewVideoUrl());
-    }
-    
-    if (updatedCourse.getStatus() != null) {
-        existingCourse.setStatus(updatedCourse.getStatus());
-    }
-    
-    if (updatedCourse.getWhatYouWillLearn() != null) {
-        existingCourse.setWhatYouWillLearn(updatedCourse.getWhatYouWillLearn());
-    }
-    
-    if (updatedCourse.getRequirements() != null) {
-        existingCourse.setRequirements(updatedCourse.getRequirements());
-    }
-    
-    if (updatedCourse.getCategory() != null) {
-        existingCourse.setCategory(updatedCourse.getCategory());
-    }
-    
-    if (updatedCourse.getTags() != null) {
-        existingCourse.setTags(updatedCourse.getTags());
-    }
-}
+    private void updateCourseFields(Course existingCourse, Course updatedCourse) {
+        // Only update fields that are not null in the incoming course
+        if (updatedCourse.getTitle() != null) {
+            existingCourse.setTitle(updatedCourse.getTitle());
+        }
 
-@Override
-public VideoLesson getVideoLesson(String courseId, String lessonId) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'getVideoLesson'");
-}
+        if (updatedCourse.getDescription() != null) {
+            existingCourse.setDescription(updatedCourse.getDescription());
+        }
 
-@Override
-public void deleteVideoLesson(String courseId, String lessonId) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'deleteVideoLesson'");
-}
+        if (updatedCourse.getShortDescription() != null) {
+            existingCourse.setShortDescription(updatedCourse.getShortDescription());
+        }
 
-@Override
-public VideoLesson addVideoLesson(String courseId, VideoLesson lesson) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'addVideoLesson'");
-}
+        if (updatedCourse.getInstructorName() != null) {
+            existingCourse.setInstructorName(updatedCourse.getInstructorName());
+        }
 
-@Override
-public VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'updateVideoLesson'");
-}
+        if (updatedCourse.getPrice() != null) {
+            existingCourse.setPrice(updatedCourse.getPrice());
+        }
 
-@Override
-public List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'getVideoLessonsWithFreePreview'");
-}
+        if (updatedCourse.getThumbnailUrl() != null) {
+            existingCourse.setThumbnailUrl(updatedCourse.getThumbnailUrl());
+        }
+
+        if (updatedCourse.getPreviewVideoUrl() != null) {
+            existingCourse.setPreviewVideoUrl(updatedCourse.getPreviewVideoUrl());
+        }
+
+        if (updatedCourse.getStatus() != null) {
+            existingCourse.setStatus(updatedCourse.getStatus());
+        }
+
+        if (updatedCourse.getWhatYouWillLearn() != null) {
+            existingCourse.setWhatYouWillLearn(updatedCourse.getWhatYouWillLearn());
+        }
+
+        if (updatedCourse.getRequirements() != null) {
+            existingCourse.setRequirements(updatedCourse.getRequirements());
+        }
+
+        if (updatedCourse.getCategory() != null) {
+            existingCourse.setCategory(updatedCourse.getCategory());
+        }
+
+        if (updatedCourse.getTags() != null) {
+            existingCourse.setTags(updatedCourse.getTags());
+        }
+    }
+
+    @Override
+    public VideoLesson getVideoLesson(String courseId, String lessonId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getVideoLesson'");
+    }
+
+    @Override
+    public void deleteVideoLesson(String courseId, String lessonId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'deleteVideoLesson'");
+    }
+
+    @Override
+    public VideoLesson addVideoLesson(String courseId, VideoLesson lesson) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'addVideoLesson'");
+    }
+
+    @Override
+    public VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'updateVideoLesson'");
+    }
+
+    @Override
+    public List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getVideoLessonsWithFreePreview'");
+    }
 
 }

@@ -8,32 +8,32 @@ import java.util.List;
 
 public interface CourseService {
 
-    public List<Course> getPublishedCourses();
+    List<Course> getPublishedCourses();
 
-    public Course getPublicCourseDetails(String courseId);
+    Course getPublicCourseDetails(String courseId);
 
-    public List<Course> getUserCourses(String id);
+    List<Course> getUserCourses(String id);
 
-    public Course getCourseWithContent(String courseId);
+    Course getCourseWithContent(String courseId);
 
-    public Course createCourse(Course course);
+    Course createCourse(Course course);
 
-    public Course updateCourse(String courseId, Course course);
+    Course updateCourse(String courseId, Course course);
 
-    public void deleteCourse(String courseId);
+    void deleteCourse(String courseId);
 
-    public List<Course> getAllCourses();
+    List<Course> getAllCourses();
 
-    public List<VideoLesson> createVideoLesson(String courseId, List<VideoLesson> lesson);
+    List<VideoLesson> createVideoLesson(String courseId, List<VideoLesson> lesson);
 
-    public VideoLesson getVideoLesson(String courseId, String lessonId);
+    VideoLesson getVideoLesson(String courseId, String lessonId);
 
-    public void deleteVideoLesson(String courseId, String lessonId);
+    void deleteVideoLesson(String courseId, String lessonId);
 
-    public VideoLesson addVideoLesson(String courseId, VideoLesson lesson);
+    VideoLesson addVideoLesson(String courseId, VideoLesson lesson);
 
-    public VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson);
+    VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson);
 
-    public List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId);
+    List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId);
 
 }

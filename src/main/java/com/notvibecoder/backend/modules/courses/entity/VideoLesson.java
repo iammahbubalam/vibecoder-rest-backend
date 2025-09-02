@@ -19,7 +19,7 @@ import java.time.Instant;
 
 /**
  * Video Lesson Entity - Represents individual video lessons within a course
- * 
+ * <p>
  * Industry-grade features:
  * - Proper MongoDB document with optimized indexes
  * - Comprehensive validation with custom messages
@@ -36,23 +36,23 @@ import java.time.Instant;
 @NoArgsConstructor
 @CompoundIndexes({
         @CompoundIndex(
-                name = "course_order_unique_idx", 
+                name = "course_order_unique_idx",
                 def = "{'courseId': 1, 'orderIndex': 1}",
                 unique = true,
                 background = true
         ),
         @CompoundIndex(
-                name = "course_created_idx", 
+                name = "course_created_idx",
                 def = "{'courseId': 1, 'createdAt': -1}",
                 background = true
         ),
         @CompoundIndex(
-                name = "course_preview_idx", 
+                name = "course_preview_idx",
                 def = "{'courseId': 1, 'isFreePreview': 1}",
                 background = true
         ),
         @CompoundIndex(
-                name = "course_duration_idx", 
+                name = "course_duration_idx",
                 def = "{'courseId': 1, 'durationMinutes': -1}",
                 background = true
         )
@@ -107,7 +107,7 @@ public class VideoLesson {
     @Field("created_at")
     private Instant createdAt;
 
-  
+
     @LastModifiedDate
     @Field("updated_at")
     private Instant updatedAt;
@@ -133,17 +133,17 @@ public class VideoLesson {
         String regex = "(?<=watch\\?v=|/videos/|embed\\/|youtu.be\\/|\\/v\\/|\\/e\\/|watch\\?v%3D|watch\\?feature=player_embedded&v=|%2Fvideos%2F|embed%2F|youtu.be%2F|%2Fv%2F)[^#\\&\\?\\n]*";
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(regex);
         java.util.regex.Matcher matcher = pattern.matcher(youtubeUrl);
-        
+
         return matcher.find() ? matcher.group() : null;
     }
 
 
     public String getFormattedDuration() {
         if (!hasDuration()) return "Duration not specified";
-        
+
         int hours = durationMinutes / 60;
         int minutes = durationMinutes % 60;
-        
+
         if (hours > 0) {
             return minutes > 0 ? String.format("%dh %dm", hours, minutes) : String.format("%dh", hours);
         }

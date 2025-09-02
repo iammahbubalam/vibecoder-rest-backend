@@ -1,15 +1,14 @@
-
 package com.notvibecoder.backend.modules.courses.service;
-
-import org.springframework.stereotype.Service;
-import java.util.List;
-import java.util.Optional;
 
 import com.notvibecoder.backend.modules.courses.entity.VideoLesson;
 import com.notvibecoder.backend.modules.courses.repository.VideoLessonRepository;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
 
 
 @Slf4j
@@ -21,7 +20,8 @@ public class VideoLessonServiceImpl implements VideoLessonService {
 
 
     @Override
-    public List<VideoLesson> createVideoLesson(String courseId , List<VideoLesson> lessons) {
+    @Transactional
+    public List<VideoLesson> createVideoLesson(String courseId, List<VideoLesson> lessons) {
         log.info("Creating {} video lessons for course: {}", lessons.size(), courseId);
 
         // Validate course ID
@@ -30,7 +30,7 @@ public class VideoLessonServiceImpl implements VideoLessonService {
         }
 
         // Validate lessons list
-        if (lessons == null || lessons.isEmpty()) {
+        if (lessons.isEmpty()) {
             throw new IllegalArgumentException("Lessons list cannot be null or empty");
         }
 
@@ -38,8 +38,6 @@ public class VideoLessonServiceImpl implements VideoLessonService {
         for (int i = 0; i < lessons.size(); i++) {
             VideoLesson lesson = lessons.get(i);
             lesson.setCourseId(courseId);
-
-            // Assign sequential order index (1, 2, 3, ...)
             lesson.setOrderIndex(i + 1);
 
         }
