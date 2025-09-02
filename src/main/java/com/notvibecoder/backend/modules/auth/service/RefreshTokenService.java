@@ -1,8 +1,8 @@
 package com.notvibecoder.backend.modules.auth.service;
 
 import com.notvibecoder.backend.core.exception.TokenRefreshException;
-import com.notvibecoder.backend.modules.admin.service.SecurityAuditService;
-import com.notvibecoder.backend.modules.admin.service.SessionManagementService;
+import com.notvibecoder.backend.modules.system.service.SecurityAuditService;
+import com.notvibecoder.backend.modules.system.service.SessionManagementService;
 import com.notvibecoder.backend.modules.auth.entity.RefreshToken;
 import com.notvibecoder.backend.modules.auth.repository.RefreshTokenRepository;
 import com.notvibecoder.backend.modules.user.security.DeviceSecurityService;

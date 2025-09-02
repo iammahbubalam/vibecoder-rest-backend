@@ -191,6 +191,16 @@ public class CourseServiceImpl implements CourseService {
         videoLessonService.deleteVideoLesson(courseId, lessonId);
     }
 
+    @Override
+    public List<VideoLesson> getAllLessonsByCourseId(String courseId) {
+        var lessons = videoLessonService.getAllLessonsByCourseId(courseId);
+        if (lessons.isEmpty()) {
+            throw new ValidationException("No lessons found for course ID: " + courseId);
+        } else {
+            return lessons;
+        }
+    }
+
 
     @Override
     @Transactional

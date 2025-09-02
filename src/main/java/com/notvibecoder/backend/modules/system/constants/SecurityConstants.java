@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.modules.admin.constants;
+package com.notvibecoder.backend.modules.system.constants;
 
 /**
  * Security Constants for Authorization

@@ -31,7 +31,7 @@ public interface CourseService {
     VideoLesson getVideoLesson(String courseId, String lessonId);
 
     void deleteVideoLesson(String courseId, String lessonId);
-
+    List<VideoLesson> getAllLessonsByCourseId(String courseId);
     VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson);
 
     List<VideoLesson> getVideoLessonsWithFreePreview(String courseId);

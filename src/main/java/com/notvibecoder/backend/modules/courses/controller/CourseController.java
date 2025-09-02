@@ -2,7 +2,7 @@ package com.notvibecoder.backend.modules.courses.controller;
 
 import com.notvibecoder.backend.core.dto.ApiResponse;
 import com.notvibecoder.backend.core.exception.ValidationException;
-import com.notvibecoder.backend.modules.admin.constants.SecurityConstants;
+import com.notvibecoder.backend.modules.system.constants.SecurityConstants;
 import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
 import com.notvibecoder.backend.modules.courses.entity.Course;
 import com.notvibecoder.backend.modules.courses.entity.VideoLesson;

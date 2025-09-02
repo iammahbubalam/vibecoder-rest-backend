@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.modules.admin.service;
+package com.notvibecoder.backend.modules.system.service;
 
 import com.notvibecoder.backend.config.properties.AppProperties;
 import com.notvibecoder.backend.modules.user.entity.Role;

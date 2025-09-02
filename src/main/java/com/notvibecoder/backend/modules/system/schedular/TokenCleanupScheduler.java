@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.modules.admin.schedular;
+package com.notvibecoder.backend.modules.system.schedular;
 
 import com.notvibecoder.backend.modules.auth.repository.RefreshTokenRepository;
 import com.notvibecoder.backend.modules.auth.service.JwtBlacklistService;

@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.modules.admin.service;
+package com.notvibecoder.backend.modules.system.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;

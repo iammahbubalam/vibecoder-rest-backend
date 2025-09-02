@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.modules.admin.service;
+package com.notvibecoder.backend.modules.system.service;
 
 import com.notvibecoder.backend.modules.auth.entity.RefreshToken;
 import com.notvibecoder.backend.modules.auth.repository.RefreshTokenRepository;
