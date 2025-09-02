@@ -19,10 +19,21 @@ public interface CourseService {
     public Course createCourse(Course course);
 
     public Course updateCourse(String courseId, Course course);
-    public List<VideoLesson> createVideoLesson(String courseId, List<VideoLesson> lesson);
 
     public void deleteCourse(String courseId);
 
     public List<Course> getAllCourses();
+
+    public List<VideoLesson> createVideoLesson(String courseId, List<VideoLesson> lesson);
+
+    public VideoLesson getVideoLesson(String courseId, String lessonId);
+
+    public void deleteVideoLesson(String courseId, String lessonId);
+
+    public VideoLesson addVideoLesson(String courseId, VideoLesson lesson);
+
+    public VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson);
+
+    public List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId);
 
 }

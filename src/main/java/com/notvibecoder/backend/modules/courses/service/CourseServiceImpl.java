@@ -46,6 +46,7 @@ public class CourseServiceImpl implements CourseService {
     @Override
     @Transactional
     public Course createCourse(Course course) {
+
         course.setStatus(CourseStatus.DRAFT);
         course.setEnrollmentCount(0L);
         course.setTotalLessons(0);
@@ -63,6 +64,7 @@ public class CourseServiceImpl implements CourseService {
             throw new CourseCreationException("Failed to create course", e);
         }
         }
+   
     @Override
     @Transactional
     public Course updateCourse(String courseId, Course course) {
@@ -199,6 +201,36 @@ private void updateCourseFields(Course existingCourse, Course updatedCourse) {
     if (updatedCourse.getTags() != null) {
         existingCourse.setTags(updatedCourse.getTags());
     }
+}
+
+@Override
+public VideoLesson getVideoLesson(String courseId, String lessonId) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'getVideoLesson'");
+}
+
+@Override
+public void deleteVideoLesson(String courseId, String lessonId) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'deleteVideoLesson'");
+}
+
+@Override
+public VideoLesson addVideoLesson(String courseId, VideoLesson lesson) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'addVideoLesson'");
+}
+
+@Override
+public VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'updateVideoLesson'");
+}
+
+@Override
+public List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'getVideoLessonsWithFreePreview'");
 }
 
 }
