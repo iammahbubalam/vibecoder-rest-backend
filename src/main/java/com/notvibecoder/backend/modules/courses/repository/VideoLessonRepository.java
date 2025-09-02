@@ -19,4 +19,8 @@ public interface VideoLessonRepository extends MongoRepository<VideoLesson, Stri
 
     @Query("{ 'courseId': ?0, 'isFreePreview': true }")
     List<VideoLesson> findFreePreviewLessonsByCourseId(String courseId);
+
+    @Query("{ 'courseId': ?0, '_id': ?1 }")
+    Optional<VideoLesson> findByCourseIdAndLessonId(String courseId, String lessonId);
+
 }

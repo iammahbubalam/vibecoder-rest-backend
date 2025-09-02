@@ -21,7 +21,7 @@ public class VideoLessonServiceImpl implements VideoLessonService {
 
     @Override
     @Transactional
-    public List<VideoLesson> createVideoLesson(String courseId, List<VideoLesson> lessons) {
+    public List<VideoLesson>   createVideoLesson(String courseId, List<VideoLesson> lessons) {
         log.info("Creating {} video lessons for course: {}", lessons.size(), courseId);
 
         // Validate course ID
@@ -78,14 +78,18 @@ public class VideoLessonServiceImpl implements VideoLessonService {
     }
 
     @Override
-    public VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'updateVideoLesson'");
+    public VideoLesson updateVideoLesson( VideoLesson lesson) {
+        return videoLessonRepository.save(lesson);
     }
 
     @Override
-    public List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getVideoLessonsWithFreePreview'");
+    public Optional<VideoLesson> getLessonByCourseIdAndLessonId(String courseId, String lessonId) {
+        var lessonOpt = videoLessonRepository.findByCourseIdAndLessonId(courseId, lessonId);
+        if (lessonOpt.isPresent()) {
+            return lessonOpt;
+        }
+        return Optional.empty();
     }
+
+
 }

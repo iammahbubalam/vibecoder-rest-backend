@@ -21,7 +21,8 @@ public interface VideoLessonService {
 
     VideoLesson addVideoLesson(String courseId, VideoLesson lesson);
 
-    VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson);
+    VideoLesson updateVideoLesson( VideoLesson lesson);
 
-    List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId);
+    Optional<VideoLesson> getLessonByCourseIdAndLessonId(String courseId, String lessonId);
+
 }

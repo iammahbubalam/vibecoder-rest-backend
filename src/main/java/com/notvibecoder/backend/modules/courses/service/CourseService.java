@@ -34,6 +34,6 @@ public interface CourseService {
 
     VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson);
 
-    List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId);
+    List<VideoLesson> getVideoLessonsWithFreePreview(String courseId);
 
 }

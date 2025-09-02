@@ -152,6 +152,71 @@ public class CourseServiceImpl implements CourseService {
     }
 
 
+
+
+    @Override
+    public VideoLesson getVideoLesson(String courseId, String lessonId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getVideoLesson'");
+    }
+
+    @Override
+    public void deleteVideoLesson(String courseId, String lessonId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'deleteVideoLesson'");
+    }
+
+    @Override
+    public VideoLesson addVideoLesson(String courseId, VideoLesson lesson) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'addVideoLesson'");
+    }
+
+    @Override
+    @Transactional
+    public VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson) {
+
+        return videoLessonService.getLessonByCourseIdAndLessonId(courseId,lessonId).map(
+                existing -> {
+                    updateVideoLessonFields(existing, lesson);
+                    return videoLessonService.updateVideoLesson(existing);
+                }
+        ).orElseThrow(() -> new ValidationException("Video lesson not found with courseId: " + courseId + " and lessonId: " + lessonId));
+
+    }
+
+    @Override
+    @Transactional
+    public List<VideoLesson> getVideoLessonsWithFreePreview(String courseId) {
+        var lessons = videoLessonService.getFreePreviewLessonsByCourseId(courseId);
+        if (lessons.isEmpty()) {
+            throw new ValidationException("No free preview lessons found for course ID: " + courseId);
+        }
+        return lessons;
+    }
+
+
+   private void updateVideoLessonFields(VideoLesson existing, VideoLesson updated) {
+        if (updated.getTitle() != null) {
+            existing.setTitle(updated.getTitle());
+        }
+        if (updated.getYoutubeUrl() != null) {
+            existing.setYoutubeUrl(updated.getYoutubeUrl());
+        }
+        if (updated.getOrderIndex() != null) {
+            existing.setOrderIndex(updated.getOrderIndex());
+        }
+        if (updated.getDescription() != null) {
+            existing.setDescription(updated.getDescription());
+        }
+        if (updated.getDurationMinutes() != null) {
+            existing.setDurationMinutes(updated.getDurationMinutes());
+        }
+        if (updated.getIsFreePreview() != null) {
+            existing.setIsFreePreview(updated.getIsFreePreview());
+        }
+    }
+
     private void updateCourseFields(Course existingCourse, Course updatedCourse) {
         // Only update fields that are not null in the incoming course
         if (updatedCourse.getTitle() != null) {
@@ -202,35 +267,4 @@ public class CourseServiceImpl implements CourseService {
             existingCourse.setTags(updatedCourse.getTags());
         }
     }
-
-    @Override
-    public VideoLesson getVideoLesson(String courseId, String lessonId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getVideoLesson'");
-    }
-
-    @Override
-    public void deleteVideoLesson(String courseId, String lessonId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'deleteVideoLesson'");
-    }
-
-    @Override
-    public VideoLesson addVideoLesson(String courseId, VideoLesson lesson) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addVideoLesson'");
-    }
-
-    @Override
-    public VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'updateVideoLesson'");
-    }
-
-    @Override
-    public List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getVideoLessonsWithFreePreview'");
-    }
-
 }
