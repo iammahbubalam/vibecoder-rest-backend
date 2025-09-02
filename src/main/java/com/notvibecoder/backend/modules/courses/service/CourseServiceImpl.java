@@ -20,6 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class CourseServiceImpl implements CourseService {
+    
     private final CourseRepository courseRepository;
     private final VideoLessonService videoLessonService;
 

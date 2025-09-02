@@ -60,4 +60,34 @@ public class VideoLessonServiceImpl implements VideoLessonService {
     public List<VideoLesson> getFreePreviewLessonsByCourseId(String courseId) {
         return videoLessonRepository.findFreePreviewLessonsByCourseId(courseId);
     }
+
+    @Override
+    public VideoLesson getVideoLesson(String courseId, String lessonId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getVideoLesson'");
+    }
+
+    @Override
+    public void deleteVideoLesson(String courseId, String lessonId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'deleteVideoLesson'");
+    }
+
+    @Override
+    public VideoLesson addVideoLesson(String courseId, VideoLesson lesson) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'addVideoLesson'");
+    }
+
+    @Override
+    public VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'updateVideoLesson'");
+    }
+
+    @Override
+    public List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getVideoLessonsWithFreePreview'");
+    }
 }

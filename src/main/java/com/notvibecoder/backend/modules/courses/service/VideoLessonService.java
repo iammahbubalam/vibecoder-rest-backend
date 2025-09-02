@@ -12,4 +12,9 @@ public interface VideoLessonService {
     List<VideoLesson> getAllLessonsByCourseId(String courseId);
     Optional<VideoLesson> getLessonByCourseIdAndOrderIndex(String courseId, Integer orderIndex);
     List<VideoLesson> getFreePreviewLessonsByCourseId(String courseId);
+    public VideoLesson getVideoLesson(String courseId, String lessonId);
+    public void deleteVideoLesson(String courseId, String lessonId);
+    public VideoLesson addVideoLesson(String courseId, VideoLesson lesson);
+    public VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson);
+    public List<VideoLesson> getVideoLessonsWithFreePreview(String courseId, String lessonId);
 }
