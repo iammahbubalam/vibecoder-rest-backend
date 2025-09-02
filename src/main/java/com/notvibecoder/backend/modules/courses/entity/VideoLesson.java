@@ -80,7 +80,7 @@ public class VideoLesson {
     @Field("youtube_url")
     private String youtubeUrl;
 
-    @NotNull(message = "Order index is required for lesson sequencing")
+    // @NotNull(message = "Order index is required for lesson sequencing")
     @Min(value = 1, message = "Order index must be positive (starting from 1)")
     @Max(value = 9999, message = "Order index cannot exceed 9999")
     @Field("order_index")

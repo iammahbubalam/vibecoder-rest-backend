@@ -73,7 +73,7 @@ public class CourseController {
     @GetMapping("/{courseId}/content")
     @PreAuthorize(SecurityConstants.CAN_ACCESS_COURSE)
     public ResponseEntity<ApiResponse<Course>> getCourseContent(@PathVariable String courseId) {
-        Course course = courseService.getCourseWithContent(courseId);
+        Course course = courseService.getCourse(courseId);
         return ResponseEntity.ok(ApiResponse.success("Course content retrieved", course));
     }
 
@@ -88,7 +88,7 @@ public class CourseController {
         log.info("User {} is creating {} video lessons for course: {}",
                 principal.getName(), lessons.size(), courseId);
         try {
-            List<VideoLesson> createdLessons = courseService.createVideoLesson(courseId, lessons);
+            List<VideoLesson> createdLessons = courseService.saveVideoLessonsAndUpdateCourse(courseId, lessons);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Video lessons created successfully", createdLessons));
         } catch (IllegalArgumentException e) {

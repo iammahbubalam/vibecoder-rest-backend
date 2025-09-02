@@ -26,12 +26,24 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public List<Course> getPublishedCourses() {
-        return List.of();
+        return courseRepository.findByStatus(CourseStatus.PUBLISHED);
+    }
+    @Override
+    public Course isCoursePublished(String courseId) {
+        return courseRepository.findByIdAndStatus(courseId, CourseStatus.PUBLISHED);
+    }
+
+    @Override
+    public void updateCourseStatus(String courseId, CourseStatus status) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ValidationException("Course not found with ID: " + courseId));
+        course.setStatus(status);
+        courseRepository.save(course);
     }
 
     @Override
     public Course getPublicCourseDetails(String courseId) {
-        return null;
+        return courseRepository.findByIdAndStatus(courseId, CourseStatus.PUBLISHED);
     }
 
     @Override
@@ -40,8 +52,8 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
-    public Course getCourseWithContent(String courseId) {
-        return null;
+    public Course getCourse(String courseId) {
+        return courseRepository.findById(courseId).orElseThrow(() -> new ValidationException("Course not found with ID: " + courseId));
     }
 
     @Override
@@ -108,23 +120,37 @@ public class CourseServiceImpl implements CourseService {
         }
     }
 
+
     @Override
     @Transactional
-    public List<VideoLesson> createVideoLesson(String courseId, List<VideoLesson> lessons) {
+    public List<VideoLesson> saveVideoLessonsAndUpdateCourse(String courseId, List<VideoLesson> lessons) {
         return courseRepository.findById(courseId)
-                .map(c -> {
-                    List<VideoLesson> createdLessons = videoLessonService.createVideoLesson(c.getId(), lessons);
-                    c.setTotalLessons(createdLessons.size());
-                    c.setTotalDurationMinutes(createdLessons.stream().mapToInt(VideoLesson::getDurationMinutes).sum());
-                    c.setUpdatedAt(Instant.now());
-                    c.setVideoLessonIds(createdLessons.stream().map(VideoLesson::getId).toList());
-                    courseRepository.save(c);
-                    return createdLessons;
+                .map(course -> {
+                    List<VideoLesson> savedLessons = videoLessonService.addVideoLessons(course.getId(), lessons);
+
+                    // Update course details
+                    course.setVideoLessonIds(savedLessons.stream()
+                            .map(VideoLesson::getId)
+                            .toList());
+
+                    course.setTotalLessons(savedLessons.size());
+
+                    // Null-safe duration handling
+                    int totalDuration = savedLessons.stream()
+                            .mapToInt(v -> v.getDurationMinutes() != null ? v.getDurationMinutes() : 0)
+                            .sum();
+                    course.setTotalDurationMinutes(totalDuration);
+
+                    course.setUpdatedAt(Instant.now());
+                    courseRepository.save(course);
+
+                    return savedLessons;
                 })
                 .orElseThrow(() -> new ValidationException("Course not found with ID: " + courseId));
     }
 
     @Override
+    @Transactional
     public void deleteCourse(String courseId) {
         try {
             courseRepository.deleteById(courseId);
@@ -139,6 +165,7 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
+    @Transactional
     public List<Course> getAllCourses() {
         try {
             return courseRepository.findAll();
@@ -151,26 +178,19 @@ public class CourseServiceImpl implements CourseService {
         }
     }
 
-
-
-
     @Override
+    @Transactional(readOnly = true)
     public VideoLesson getVideoLesson(String courseId, String lessonId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getVideoLesson'");
+        return videoLessonService.getVideoLesson(courseId, lessonId)
+        .orElseThrow(() -> new ValidationException("Video lesson not found with courseId: " + courseId + " and lessonId: " + lessonId));
     }
 
     @Override
+    @Transactional
     public void deleteVideoLesson(String courseId, String lessonId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'deleteVideoLesson'");
+        videoLessonService.deleteVideoLesson(courseId, lessonId);
     }
 
-    @Override
-    public VideoLesson addVideoLesson(String courseId, VideoLesson lesson) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addVideoLesson'");
-    }
 
     @Override
     @Transactional

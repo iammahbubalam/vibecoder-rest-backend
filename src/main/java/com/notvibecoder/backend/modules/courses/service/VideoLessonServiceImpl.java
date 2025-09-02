@@ -19,30 +19,6 @@ public class VideoLessonServiceImpl implements VideoLessonService {
     private final VideoLessonRepository videoLessonRepository;
 
 
-    @Override
-    @Transactional
-    public List<VideoLesson>   createVideoLesson(String courseId, List<VideoLesson> lessons) {
-        log.info("Creating {} video lessons for course: {}", lessons.size(), courseId);
-
-        // Validate course ID
-        if (courseId == null || courseId.trim().isEmpty()) {
-            throw new IllegalArgumentException("Course ID cannot be null or empty");
-        }
-
-        // Validate lessons list
-        if (lessons.isEmpty()) {
-            throw new IllegalArgumentException("Lessons list cannot be null or empty");
-        }
-
-        // Process each lesson and assign sequential order indexes
-        for (int i = 0; i < lessons.size(); i++) {
-            VideoLesson lesson = lessons.get(i);
-            lesson.setCourseId(courseId);
-            lesson.setOrderIndex(i + 1);
-
-        }
-        return videoLessonRepository.saveAll(lessons);
-    }
 
     @Override
     public List<VideoLesson> getAllLessonsByCourseId(String courseId) {
@@ -60,35 +36,54 @@ public class VideoLessonServiceImpl implements VideoLessonService {
     }
 
     @Override
-    public VideoLesson getVideoLesson(String courseId, String lessonId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getVideoLesson'");
+    public Optional<VideoLesson> getVideoLesson(String courseId, String lessonId) {
+
+        return videoLessonRepository.findByCourseIdAndLessonId(courseId, lessonId);
     }
 
     @Override
     public void deleteVideoLesson(String courseId, String lessonId) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'deleteVideoLesson'");
+        videoLessonRepository.deleteVideoLesson(courseId, lessonId);
     }
 
     @Override
-    public VideoLesson addVideoLesson(String courseId, VideoLesson lesson) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addVideoLesson'");
-    }
+    @Transactional
+    public List<VideoLesson> addVideoLessons(String courseId, List<VideoLesson> newLessons) {
+        log.info("Adding {} video lessons to course: {}", newLessons.size(), courseId);
 
+        if (courseId == null || courseId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Course ID cannot be null or empty");
+        }
+        if (newLessons == null || newLessons.isEmpty()) {
+            throw new IllegalArgumentException("Lessons list cannot be null or empty");
+        }
+
+        List<VideoLesson> existingLessons = videoLessonRepository.findAllLessonsByCourseId(courseId);
+        int maxOrderIndex = existingLessons.stream()
+                .mapToInt(VideoLesson::getOrderIndex)
+                .max()
+                .orElse(0);
+
+        for (int i = 0; i < newLessons.size(); i++) {
+            VideoLesson lesson = newLessons.get(i);
+            lesson.setCourseId(courseId);
+            lesson.setOrderIndex(maxOrderIndex + i + 1);
+        }
+
+        existingLessons.addAll(newLessons);
+        return videoLessonRepository.saveAll(existingLessons);
+    }
     @Override
+    @Transactional
     public VideoLesson updateVideoLesson( VideoLesson lesson) {
         return videoLessonRepository.save(lesson);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<VideoLesson> getLessonByCourseIdAndLessonId(String courseId, String lessonId) {
         var lessonOpt = videoLessonRepository.findByCourseIdAndLessonId(courseId, lessonId);
-        if (lessonOpt.isPresent()) {
-            return lessonOpt;
-        }
-        return Optional.empty();
+        return lessonOpt;
     }
 
 

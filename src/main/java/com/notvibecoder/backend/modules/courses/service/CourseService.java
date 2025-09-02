@@ -1,20 +1,22 @@
 package com.notvibecoder.backend.modules.courses.service;
 
 import com.notvibecoder.backend.modules.courses.entity.Course;
+import com.notvibecoder.backend.modules.courses.entity.CourseStatus;
 import com.notvibecoder.backend.modules.courses.entity.VideoLesson;
 
 import java.util.List;
 
 
 public interface CourseService {
-
+    Course isCoursePublished(String courseId);
+    void updateCourseStatus(String courseId, CourseStatus status);
     List<Course> getPublishedCourses();
 
     Course getPublicCourseDetails(String courseId);
 
     List<Course> getUserCourses(String id);
 
-    Course getCourseWithContent(String courseId);
+    Course getCourse(String courseId);
 
     Course createCourse(Course course);
 
@@ -24,13 +26,11 @@ public interface CourseService {
 
     List<Course> getAllCourses();
 
-    List<VideoLesson> createVideoLesson(String courseId, List<VideoLesson> lesson);
+    public List<VideoLesson> saveVideoLessonsAndUpdateCourse(String courseId, List<VideoLesson> lessons);
 
     VideoLesson getVideoLesson(String courseId, String lessonId);
 
     void deleteVideoLesson(String courseId, String lessonId);
-
-    VideoLesson addVideoLesson(String courseId, VideoLesson lesson);
 
     VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson);
 
