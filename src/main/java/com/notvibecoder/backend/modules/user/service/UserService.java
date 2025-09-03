@@ -7,11 +7,12 @@ import com.notvibecoder.backend.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -20,16 +21,13 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    // ← UPDATED CACHE NAME
-    @Cacheable(value = "users-by-email", key = "#email")
+
     @Transactional(readOnly = true)
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + email));
     }
 
-    // ← UPDATED CACHE NAME AND EVICTION
-    @CacheEvict(value = {"users-by-email", "users-by-id"}, key = "#email")
     @Transactional
     public User updateProfile(String email, UserUpdateRequest updateRequest) {
         User existingUser = findByEmail(email);
@@ -48,11 +46,45 @@ public class UserService {
         return savedUser;
     }
 
-    // ← UPDATED CACHE NAME
-    @Cacheable(value = "users-by-id", key = "#id")
     @Transactional(readOnly = true)
     public User findById(String id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + id));
+    }
+
+   
+    @Transactional
+    public void addPurchasedCourse(String userId, String courseId) {
+        User user = findById(userId);
+        
+        // Create a new mutable set and add the course ID
+        Set<String> updatedCourseIds = new HashSet<>(user.getPurchasedCourseIds());
+        updatedCourseIds.add(courseId);
+        
+        user.setPurchasedCourseIds(updatedCourseIds);
+        user.setUpdatedAt(Instant.now());
+        
+        userRepository.save(user);
+        log.info("Added course {} to user {}'s purchased courses", courseId, userId);
+    }
+
+    @CacheEvict(value = {"users-by-email", "users-by-id"}, allEntries = true)
+    @Transactional
+    public void removePurchasedCourse(String userId, String courseId) {
+        User user = findById(userId);
+        
+        // Create a new mutable set and remove the course ID
+        Set<String> updatedCourseIds = new HashSet<>(user.getPurchasedCourseIds());
+        boolean removed = updatedCourseIds.remove(courseId);
+        
+        if (removed) {
+            user.setPurchasedCourseIds(updatedCourseIds);
+            user.setUpdatedAt(Instant.now());
+            
+            userRepository.save(user);
+            log.info("Removed course {} from user {}'s purchased courses", courseId, userId);
+        } else {
+            log.warn("Course {} was not found in user {}'s purchased courses", courseId, userId);
+        }
     }
 }

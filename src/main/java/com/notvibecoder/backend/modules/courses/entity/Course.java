@@ -71,6 +71,9 @@ public class Course {
     @Field("price")
     private BigDecimal price;
 
+    @Field("discount_price")
+    private BigDecimal discountPrice;
+
     @Field("thumbnail_url")
     private String thumbnailUrl;
 

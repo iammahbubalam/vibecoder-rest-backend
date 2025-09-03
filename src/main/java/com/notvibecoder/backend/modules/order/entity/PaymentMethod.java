@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.modules.payment.entity;
+package com.notvibecoder.backend.modules.order.entity;
 
 public enum PaymentMethod {
     BKASH,
