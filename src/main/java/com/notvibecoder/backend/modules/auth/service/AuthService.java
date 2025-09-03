@@ -1,9 +1,9 @@
 package com.notvibecoder.backend.modules.auth.service;
 
 import com.notvibecoder.backend.core.exception.TokenRefreshException;
-import com.notvibecoder.backend.modules.system.service.SessionManagementService;
 import com.notvibecoder.backend.modules.auth.dto.RotatedTokens;
 import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
+import com.notvibecoder.backend.modules.system.service.SessionManagementService;
 import com.notvibecoder.backend.modules.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;

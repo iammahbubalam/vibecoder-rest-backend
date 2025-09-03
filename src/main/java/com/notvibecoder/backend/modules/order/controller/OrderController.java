@@ -1,20 +1,18 @@
 package com.notvibecoder.backend.modules.order.controller;
 
+import com.notvibecoder.backend.core.dto.ApiResponse;
+import com.notvibecoder.backend.modules.order.entity.Order;
+import com.notvibecoder.backend.modules.order.entity.OrderStatus;
+import com.notvibecoder.backend.modules.order.entity.PaymentMethod;
+import com.notvibecoder.backend.modules.order.service.OrderService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import com.notvibecoder.backend.core.dto.ApiResponse;
-import com.notvibecoder.backend.modules.order.entity.Order;
-import com.notvibecoder.backend.modules.order.entity.OrderStatus;
-import com.notvibecoder.backend.modules.order.entity.PaymentMethod;
-import com.notvibecoder.backend.modules.order.service.OrderService;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import java.security.Principal;
 
@@ -26,24 +24,6 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    /**
-     * Advanced order search endpoint for admin users
-     * GET /api/v1/orders/search
-     * 
-     * Query Parameters (all optional):
-     * - userId: Filter by specific user ID
-     * - courseId: Filter by specific course ID  
-     * - status: Filter by order status (PENDING, SUBMITTED, VERIFIED, REJECTED)
-     * - paymentMethod: Filter by payment method (BKASH, NAGAD, ROCKET, BANK_TRANSFER)
-     * - transactionId: Search by transaction ID (partial match)
-     * - phoneNumber: Search by phone number (partial match)
-     * - searchText: Text search across user name, email, course title, instructor
-     * - dateFrom: Start date filter (format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ)
-     * - dateTo: End date filter (format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ)
-     * - page: Page number (default: 0)
-     * - size: Page size (default: 20, max: 100)
-     * - sort: Sort field (default: createdAt,desc)
-     */
     @GetMapping("/search")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Page<Order>>> searchOrders(
@@ -62,8 +42,8 @@ public class OrderController {
             @RequestParam(defaultValue = "desc") String sortDir) {
 
         log.info("Admin searching orders with filters - userId: {}, courseId: {}, status: {}, paymentMethod: {}, " +
-                 "transactionId: {}, phoneNumber: {}, searchText: {}, dateFrom: {}, dateTo: {}", 
-                 userId, courseId, status, paymentMethod, transactionId, phoneNumber, searchText, dateFrom, dateTo);
+                        "transactionId: {}, phoneNumber: {}, searchText: {}, dateFrom: {}, dateTo: {}",
+                userId, courseId, status, paymentMethod, transactionId, phoneNumber, searchText, dateFrom, dateTo);
 
         // Validate pagination parameters
         if (page < 0) {
@@ -83,12 +63,12 @@ public class OrderController {
         }
 
         // Create pageable with sorting
-        org.springframework.data.domain.Sort.Direction direction = 
-                "asc".equalsIgnoreCase(sortDir) ? 
-                org.springframework.data.domain.Sort.Direction.ASC : 
-                org.springframework.data.domain.Sort.Direction.DESC;
-        
-        Pageable pageable = PageRequest.of(page, size, 
+        org.springframework.data.domain.Sort.Direction direction =
+                "asc".equalsIgnoreCase(sortDir) ?
+                        org.springframework.data.domain.Sort.Direction.ASC :
+                        org.springframework.data.domain.Sort.Direction.DESC;
+
+        Pageable pageable = PageRequest.of(page, size,
                 org.springframework.data.domain.Sort.by(direction, sortBy));
 
         try {
@@ -134,8 +114,8 @@ public class OrderController {
 
         String userId = principal.getName(); // Assuming principal name is user ID
 
-        log.info("User {} searching their orders with filters - status: {}, courseId: {}, searchText: {}, dateFrom: {}, dateTo: {}", 
-                 userId, status, courseId, searchText, dateFrom, dateTo);
+        log.info("User {} searching their orders with filters - status: {}, courseId: {}, searchText: {}, dateFrom: {}, dateTo: {}",
+                userId, status, courseId, searchText, dateFrom, dateTo);
 
         // Validate pagination parameters
         if (page < 0 || size <= 0 || size > 50) {
@@ -146,7 +126,7 @@ public class OrderController {
                             .build());
         }
 
-        Pageable pageable = PageRequest.of(page, size, 
+        Pageable pageable = PageRequest.of(page, size,
                 org.springframework.data.domain.Sort.by(
                         org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
 
@@ -189,7 +169,7 @@ public class OrderController {
 
         log.info("Searching orders by transaction ID: {}", transactionId);
 
-        Pageable pageable = PageRequest.of(page, size, 
+        Pageable pageable = PageRequest.of(page, size,
                 org.springframework.data.domain.Sort.by(
                         org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
 
@@ -231,7 +211,7 @@ public class OrderController {
 
         log.info("Admin retrieving orders with status: {}", status);
 
-        Pageable pageable = PageRequest.of(page, size, 
+        Pageable pageable = PageRequest.of(page, size,
                 org.springframework.data.domain.Sort.by(
                         org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
 
@@ -268,7 +248,7 @@ public class OrderController {
 
         log.info("Admin retrieving pending verification orders");
 
-        Pageable pageable = PageRequest.of(page, size, 
+        Pageable pageable = PageRequest.of(page, size,
                 org.springframework.data.domain.Sort.by(
                         org.springframework.data.domain.Sort.Direction.ASC, "lastPaymentAttemptAt"));
 

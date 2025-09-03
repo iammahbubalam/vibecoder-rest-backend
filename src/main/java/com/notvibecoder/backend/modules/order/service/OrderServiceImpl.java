@@ -1,14 +1,5 @@
 package com.notvibecoder.backend.modules.order.service;
 
-import java.math.BigDecimal;
-import java.util.List;
-
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.notvibecoder.backend.core.exception.ValidationException;
 import com.notvibecoder.backend.modules.courses.entity.Course;
 import com.notvibecoder.backend.modules.courses.entity.CourseStatus;
@@ -19,9 +10,16 @@ import com.notvibecoder.backend.modules.order.entity.PaymentMethod;
 import com.notvibecoder.backend.modules.order.repository.OrderRepository;
 import com.notvibecoder.backend.modules.user.entity.User;
 import com.notvibecoder.backend.modules.user.service.UserService;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -95,10 +93,10 @@ public class OrderServiceImpl implements OrderService {
 
             // Save order
             Order savedOrder = orderRepository.save(order);
-            
-            log.info("Order created successfully with ID: {} for user: {} and course: {}, total amount: {}", 
+
+            log.info("Order created successfully with ID: {} for user: {} and course: {}, total amount: {}",
                     savedOrder.getId(), userId, courseId, totalAmount);
-            
+
             return savedOrder;
 
         } catch (DataIntegrityViolationException e) {
@@ -109,18 +107,17 @@ public class OrderServiceImpl implements OrderService {
             // Re-throw validation exceptions
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error creating order for user: {} and course: {}: {}", 
-                     userId, courseId, e.getMessage(), e);
+            log.error("Unexpected error creating order for user: {} and course: {}: {}",
+                    userId, courseId, e.getMessage(), e);
             throw new ValidationException("Failed to create order: " + e.getMessage());
         }
     }
 
 
-
     @Override
     @Transactional
     public Order submitPayment(String orderId, PaymentMethod paymentMethod, String transactionId, String phoneNumber,
-            String paymentNote) {
+                               String paymentNote) {
         // Input validation
         if (orderId == null || orderId.trim().isEmpty()) {
             throw new ValidationException("Order ID cannot be null or empty");
@@ -165,7 +162,7 @@ public class OrderServiceImpl implements OrderService {
             // Save updated order
             Order updatedOrder = orderRepository.save(order);
 
-            log.info("Payment submitted successfully for order: {} with transaction: {}", 
+            log.info("Payment submitted successfully for order: {} with transaction: {}",
                     orderId, transactionId);
 
             return updatedOrder;
@@ -178,8 +175,8 @@ public class OrderServiceImpl implements OrderService {
             // Re-throw validation exceptions
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error submitting payment for order: {}: {}", 
-                     orderId, e.getMessage(), e);
+            log.error("Unexpected error submitting payment for order: {}: {}",
+                    orderId, e.getMessage(), e);
             throw new ValidationException("Failed to submit payment: " + e.getMessage());
         }
     }
@@ -226,8 +223,8 @@ public class OrderServiceImpl implements OrderService {
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error cancelling order: {} for user: {}: {}", 
-                     orderId, userId, e.getMessage(), e);
+            log.error("Unexpected error cancelling order: {} for user: {}: {}",
+                    orderId, userId, e.getMessage(), e);
             throw new ValidationException("Failed to cancel order: " + e.getMessage());
         }
     }
@@ -259,7 +256,7 @@ public class OrderServiceImpl implements OrderService {
 
             // Business rule - only allow approval for SUBMITTED orders
             if (order.getStatus() != OrderStatus.SUBMITTED) {
-                throw new ValidationException("Order cannot be approved. Current status: " + order.getStatus() + 
+                throw new ValidationException("Order cannot be approved. Current status: " + order.getStatus() +
                         ". Only SUBMITTED orders can be approved.");
             }
 
@@ -282,11 +279,11 @@ public class OrderServiceImpl implements OrderService {
                 userService.addPurchasedCourse(order.getUserId(), order.getCourseId());
                 log.info("Course access granted: Added course {} to user {}", order.getCourseId(), order.getUserId());
             } catch (Exception e) {
-                log.error("Failed to grant course access for order: {} - course: {} to user: {}. Error: {}", 
-                         orderId, order.getCourseId(), order.getUserId(), e.getMessage());
+                log.error("Failed to grant course access for order: {} - course: {} to user: {}. Error: {}",
+                        orderId, order.getCourseId(), order.getUserId(), e.getMessage());
             }
 
-            log.info("Payment approved successfully for order: {} by admin: {}. User {} now has access to course: {}", 
+            log.info("Payment approved successfully for order: {} by admin: {}. User {} now has access to course: {}",
                     orderId, adminId, order.getUserId(), order.getCourseId());
 
             // TODO: Optionally trigger course access grant notification or other side effects
@@ -296,8 +293,8 @@ public class OrderServiceImpl implements OrderService {
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error approving payment for order: {} by admin: {}: {}", 
-                     orderId, adminId, e.getMessage(), e);
+            log.error("Unexpected error approving payment for order: {} by admin: {}: {}",
+                    orderId, adminId, e.getMessage(), e);
             throw new ValidationException("Failed to approve payment: " + e.getMessage());
         }
     }
@@ -332,7 +329,7 @@ public class OrderServiceImpl implements OrderService {
 
             // Business rule - only allow rejection for SUBMITTED orders
             if (order.getStatus() != OrderStatus.SUBMITTED) {
-                throw new ValidationException("Order cannot be rejected. Current status: " + order.getStatus() + 
+                throw new ValidationException("Order cannot be rejected. Current status: " + order.getStatus() +
                         ". Only SUBMITTED orders can be rejected.");
             }
 
@@ -351,19 +348,19 @@ public class OrderServiceImpl implements OrderService {
             // Save updated order
             Order rejectedOrder = orderRepository.save(order);
 
-            log.info("Payment rejected successfully for order: {} by admin: {}. Reason: {}", 
+            log.info("Payment rejected successfully for order: {} by admin: {}. Reason: {}",
                     orderId, adminId, rejectionReason);
 
             // TODO: Optionally trigger rejection notification to user
-            
+
             return rejectedOrder;
 
         } catch (ValidationException e) {
             // Re-throw validation exceptions
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error rejecting payment for order: {} by admin: {}: {}", 
-                     orderId, adminId, e.getMessage(), e);
+            log.error("Unexpected error rejecting payment for order: {} by admin: {}: {}",
+                    orderId, adminId, e.getMessage(), e);
             throw new ValidationException("Failed to reject payment: " + e.getMessage());
         }
     }
@@ -398,7 +395,7 @@ public class OrderServiceImpl implements OrderService {
 
             // Business rule - only allow revocation for VERIFIED orders (active course access)
             if (order.getStatus() != OrderStatus.VERIFIED) {
-                throw new ValidationException("Order cannot be revoked. Current status: " + order.getStatus() + 
+                throw new ValidationException("Order cannot be revoked. Current status: " + order.getStatus() +
                         ". Only VERIFIED orders can be revoked.");
             }
 
@@ -407,8 +404,8 @@ public class OrderServiceImpl implements OrderService {
                 userService.removePurchasedCourse(order.getUserId(), order.getCourseId());
                 log.info("Course access revoked: Removed course {} from user {}", order.getCourseId(), order.getUserId());
             } catch (Exception e) {
-                log.error("Failed to revoke course access for order: {} - course: {} from user: {}. Error: {}", 
-                         orderId, order.getCourseId(), order.getUserId(), e.getMessage());
+                log.error("Failed to revoke course access for order: {} - course: {} from user: {}. Error: {}",
+                        orderId, order.getCourseId(), order.getUserId(), e.getMessage());
                 // Continue with order update even if user update fails for audit trail
             }
 
@@ -422,19 +419,19 @@ public class OrderServiceImpl implements OrderService {
             // Save updated order
             Order revokedOrder = orderRepository.save(order);
 
-            log.info("Course access revoked successfully for order: {} by admin: {}. Reason: {}", 
+            log.info("Course access revoked successfully for order: {} by admin: {}. Reason: {}",
                     orderId, adminId, revocationReason);
 
             // TODO: Optionally trigger revocation notification to user
-            
+
             return revokedOrder;
 
         } catch (ValidationException e) {
             // Re-throw validation exceptions
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error revoking access for order: {} by admin: {}: {}", 
-                     orderId, adminId, e.getMessage(), e);
+            log.error("Unexpected error revoking access for order: {} by admin: {}: {}",
+                    orderId, adminId, e.getMessage(), e);
             throw new ValidationException("Failed to revoke access: " + e.getMessage());
         }
     }
@@ -469,8 +466,8 @@ public class OrderServiceImpl implements OrderService {
             // Re-throw validation exceptions
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error retrieving order: {} for user: {}: {}", 
-                     orderId, userId, e.getMessage(), e);
+            log.error("Unexpected error retrieving order: {} for user: {}: {}",
+                    orderId, userId, e.getMessage(), e);
             throw new ValidationException("Failed to retrieve order: " + e.getMessage());
         }
     }
@@ -560,15 +557,15 @@ public class OrderServiceImpl implements OrderService {
         try {
             // Check if user has a verified order for this course
             boolean hasVerifiedOrder = orderRepository.existsByUserIdAndCourseIdAndStatus(
-                userId, courseId, OrderStatus.VERIFIED
+                    userId, courseId, OrderStatus.VERIFIED
             );
-            
+
             log.debug("User {} has active purchase for course {}: {}", userId, courseId, hasVerifiedOrder);
             return hasVerifiedOrder;
-            
+
         } catch (Exception e) {
-            log.error("Error checking active purchase for user: {} and course: {}: {}", 
-                     userId, courseId, e.getMessage());
+            log.error("Error checking active purchase for user: {} and course: {}: {}",
+                    userId, courseId, e.getMessage());
             return false; // Fail safely - deny access on error
         }
     }
@@ -589,7 +586,7 @@ public class OrderServiceImpl implements OrderService {
 
             // Find all verified orders for the user and extract course IDs
             List<Order> verifiedOrders = orderRepository.findByUserIdAndStatus(userId, OrderStatus.VERIFIED);
-            
+
             List<String> courseIds = verifiedOrders.stream()
                     .map(Order::getCourseId)
                     .distinct() // Remove duplicates (in case of multiple orders for same course)
@@ -602,8 +599,8 @@ public class OrderServiceImpl implements OrderService {
             // Re-throw validation exceptions
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error retrieving purchased course IDs for user: {}: {}", 
-                     userId, e.getMessage(), e);
+            log.error("Unexpected error retrieving purchased course IDs for user: {}: {}",
+                    userId, e.getMessage(), e);
             throw new ValidationException("Failed to retrieve purchased courses: " + e.getMessage());
         }
     }
@@ -648,22 +645,22 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public Page<Order> searchOrders(String userId, String courseId, OrderStatus status, PaymentMethod paymentMethod,
-            String transactionId, String phoneNumber, String searchText, String dateFrom, String dateTo,
-            Pageable pageable) {
-        
+                                    String transactionId, String phoneNumber, String searchText, String dateFrom, String dateTo,
+                                    Pageable pageable) {
+
         if (pageable == null) {
             throw new ValidationException("Pageable cannot be null");
         }
 
         log.debug("Searching orders with filters - userId: {}, courseId: {}, status: {}, paymentMethod: {}, " +
-                  "transactionId: {}, phoneNumber: {}, searchText: {}, dateFrom: {}, dateTo: {}", 
-                  userId, courseId, status, paymentMethod, transactionId, phoneNumber, searchText, dateFrom, dateTo);
+                        "transactionId: {}, phoneNumber: {}, searchText: {}, dateFrom: {}, dateTo: {}",
+                userId, courseId, status, paymentMethod, transactionId, phoneNumber, searchText, dateFrom, dateTo);
 
         try {
             // Parse and normalize date inputs
             java.time.Instant dateFromInstant = parseDateString(dateFrom);
             java.time.Instant dateToInstant = parseDateStringAsEndOfDay(dateTo);
-            
+
             // Normalize string inputs (trim and convert empty strings to null)
             String normalizedUserId = normalizeString(userId);
             String normalizedCourseId = normalizeString(courseId);
@@ -673,18 +670,18 @@ public class OrderServiceImpl implements OrderService {
 
             // Use the generalized search query that handles all combinations dynamically
             return orderRepository.searchOrders(
-                normalizedUserId,
-                normalizedCourseId,
-                status,
-                paymentMethod,
-                normalizedTransactionId,
-                normalizedPhoneNumber,
-                normalizedSearchText,
-                dateFromInstant,
-                dateToInstant,
-                pageable
+                    normalizedUserId,
+                    normalizedCourseId,
+                    status,
+                    paymentMethod,
+                    normalizedTransactionId,
+                    normalizedPhoneNumber,
+                    normalizedSearchText,
+                    dateFromInstant,
+                    dateToInstant,
+                    pageable
             );
-            
+
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -710,16 +707,16 @@ public class OrderServiceImpl implements OrderService {
 
             // Get all verified orders for this course
             List<Order> verifiedOrders = orderRepository.findByCourseIdAndStatusVerified(courseId);
-            
+
             // Calculate total revenue
             BigDecimal totalRevenue = verifiedOrders.stream()
                     .map(Order::getTotalAmount)
                     .filter(amount -> amount != null)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            log.debug("Course {} has generated revenue: {} from {} orders", 
-                     courseId, totalRevenue, verifiedOrders.size());
-            
+            log.debug("Course {} has generated revenue: {} from {} orders",
+                    courseId, totalRevenue, verifiedOrders.size());
+
             return totalRevenue;
 
         } catch (ValidationException e) {
@@ -742,7 +739,7 @@ public class OrderServiceImpl implements OrderService {
             long pendingVerification = orderRepository.countByStatus(OrderStatus.SUBMITTED);
             long completed = orderRepository.countByStatus(OrderStatus.VERIFIED);
             long rejected = orderRepository.countByStatus(OrderStatus.REJECTED);
-            
+
             // Calculate cancelled orders (we treat REJECTED with user cancellation reason as cancelled)
             // For now, we'll count all REJECTED as rejected since we don't have separate CANCELLED status
             long cancelled = 0; // This could be enhanced to filter REJECTED orders by rejection reason
@@ -755,17 +752,17 @@ public class OrderServiceImpl implements OrderService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             OrderStatistics stats = new OrderStatistics(
-                totalOrders,
-                pendingPayment,
-                pendingVerification,
-                completed,
-                rejected,
-                cancelled,
-                totalRevenue
+                    totalOrders,
+                    pendingPayment,
+                    pendingVerification,
+                    completed,
+                    rejected,
+                    cancelled,
+                    totalRevenue
             );
 
-            log.debug("Order statistics: Total={}, Pending={}, Submitted={}, Verified={}, Rejected={}, Revenue={}", 
-                     totalOrders, pendingPayment, pendingVerification, completed, rejected, totalRevenue);
+            log.debug("Order statistics: Total={}, Pending={}, Submitted={}, Verified={}, Rejected={}, Revenue={}",
+                    totalOrders, pendingPayment, pendingVerification, completed, rejected, totalRevenue);
 
             return stats;
 
@@ -791,41 +788,41 @@ public class OrderServiceImpl implements OrderService {
         try {
             List<DailyOrderSummary> summaries = new java.util.ArrayList<>();
             java.time.LocalDate currentDate = java.time.LocalDate.now();
-            
+
             for (int i = 0; i < days; i++) {
                 java.time.LocalDate date = currentDate.minusDays(i);
-                
+
                 // Calculate start and end of day in UTC
                 java.time.Instant startOfDay = date.atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
                 java.time.Instant endOfDay = date.plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
-                
+
                 // Get orders for this day
                 List<Order> dayOrders = orderRepository.findOrdersBetweenDates(startOfDay, endOfDay);
-                
+
                 // Calculate metrics
                 long orderCount = dayOrders.size();
-                
+
                 // Calculate revenue from verified orders only
                 BigDecimal dayRevenue = dayOrders.stream()
                         .filter(order -> order.getStatus() == OrderStatus.VERIFIED)
                         .map(Order::getTotalAmount)
                         .filter(amount -> amount != null)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
+
                 // Count new customers (users with their first order on this day)
                 // This is a simplified approach - for production, you'd need more sophisticated logic
                 long newCustomers = dayOrders.stream()
                         .map(Order::getUserId)
                         .distinct()
                         .count();
-                
+
                 DailyOrderSummary summary = new DailyOrderSummary(
-                    date.toString(),
-                    orderCount,
-                    dayRevenue,
-                    newCustomers
+                        date.toString(),
+                        orderCount,
+                        dayRevenue,
+                        newCustomers
                 );
-                
+
                 summaries.add(summary);
             }
 
@@ -848,12 +845,12 @@ public class OrderServiceImpl implements OrderService {
         try {
             // Define expiry threshold (e.g., orders pending for more than 24 hours)
             java.time.Instant expiryThreshold = java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS);
-            
+
             // Find expired pending orders
             List<Order> expiredOrders = orderRepository.findExpiredPendingOrders(expiryThreshold);
-            
+
             int expiredCount = 0;
-            
+
             for (Order order : expiredOrders) {
                 try {
                     // Update order status to REJECTED
@@ -861,12 +858,12 @@ public class OrderServiceImpl implements OrderService {
                     order.setRejectionReason("Order expired - no payment submitted within 24 hours");
                     order.setAdminNote("Auto-expired by system");
                     order.setVerifiedAt(java.time.Instant.now());
-                    
+
                     orderRepository.save(order);
                     expiredCount++;
-                    
+
                     log.debug("Expired order: {} for user: {}", order.getId(), order.getUserId());
-                    
+
                 } catch (Exception e) {
                     log.error("Failed to expire order {}: {}", order.getId(), e.getMessage());
                     // Continue processing other orders even if one fails
@@ -874,9 +871,9 @@ public class OrderServiceImpl implements OrderService {
             }
 
             log.info("Processed {} expired orders", expiredCount);
-            
+
             // TODO: Optionally send notifications to users about expired orders
-            
+
             return expiredCount;
 
         } catch (Exception e) {
@@ -886,8 +883,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
 
-
-        /**
+    /**
      * Normalize string input - trim whitespace and convert empty strings to null
      */
     private String normalizeString(String input) {
@@ -905,20 +901,20 @@ public class OrderServiceImpl implements OrderService {
         if (dateStr == null || dateStr.trim().isEmpty()) {
             return null;
         }
-        
+
         try {
             String trimmed = dateStr.trim();
-            
+
             // If only date provided (YYYY-MM-DD), set to start of day
             if (trimmed.matches("\\d{4}-\\d{2}-\\d{2}")) {
                 return java.time.LocalDate.parse(trimmed)
                         .atStartOfDay(java.time.ZoneOffset.UTC)
                         .toInstant();
             }
-            
+
             // Parse as ISO instant
             return java.time.Instant.parse(trimmed);
-            
+
         } catch (Exception e) {
             log.warn("Invalid date format: {}. Expected YYYY-MM-DD or ISO format. Ignoring date filter.", dateStr);
             return null;
@@ -932,10 +928,10 @@ public class OrderServiceImpl implements OrderService {
         if (dateStr == null || dateStr.trim().isEmpty()) {
             return null;
         }
-        
+
         try {
             String trimmed = dateStr.trim();
-            
+
             // If only date provided (YYYY-MM-DD), set to end of day
             if (trimmed.matches("\\d{4}-\\d{2}-\\d{2}")) {
                 return java.time.LocalDate.parse(trimmed)
@@ -943,10 +939,10 @@ public class OrderServiceImpl implements OrderService {
                         .atZone(java.time.ZoneOffset.UTC)
                         .toInstant();
             }
-            
+
             // Parse as ISO instant
             return java.time.Instant.parse(trimmed);
-            
+
         } catch (Exception e) {
             log.warn("Invalid date format: {}. Expected YYYY-MM-DD or ISO format. Ignoring date filter.", dateStr);
             return null;

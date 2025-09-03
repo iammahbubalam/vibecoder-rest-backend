@@ -17,9 +17,9 @@ public interface VideoLessonService {
 
     void deleteVideoLesson(String courseId, String lessonId);
 
-    List<VideoLesson> addVideoLessons(String courseId,  List<VideoLesson> lesson);
+    List<VideoLesson> addVideoLessons(String courseId, List<VideoLesson> lesson);
 
-    VideoLesson updateVideoLesson( VideoLesson lesson);
+    VideoLesson updateVideoLesson(VideoLesson lesson);
 
     Optional<VideoLesson> getLessonByCourseIdAndLessonId(String courseId, String lessonId);
 

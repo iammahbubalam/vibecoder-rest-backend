@@ -52,18 +52,18 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + id));
     }
 
-   
+
     @Transactional
     public void addPurchasedCourse(String userId, String courseId) {
         User user = findById(userId);
-        
+
         // Create a new mutable set and add the course ID
         Set<String> updatedCourseIds = new HashSet<>(user.getPurchasedCourseIds());
         updatedCourseIds.add(courseId);
-        
+
         user.setPurchasedCourseIds(updatedCourseIds);
         user.setUpdatedAt(Instant.now());
-        
+
         userRepository.save(user);
         log.info("Added course {} to user {}'s purchased courses", courseId, userId);
     }
@@ -72,15 +72,15 @@ public class UserService {
     @Transactional
     public void removePurchasedCourse(String userId, String courseId) {
         User user = findById(userId);
-        
+
         // Create a new mutable set and remove the course ID
         Set<String> updatedCourseIds = new HashSet<>(user.getPurchasedCourseIds());
         boolean removed = updatedCourseIds.remove(courseId);
-        
+
         if (removed) {
             user.setPurchasedCourseIds(updatedCourseIds);
             user.setUpdatedAt(Instant.now());
-            
+
             userRepository.save(user);
             log.info("Removed course {} from user {}'s purchased courses", courseId, userId);
         } else {

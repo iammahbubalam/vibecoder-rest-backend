@@ -28,6 +28,7 @@ public class CourseServiceImpl implements CourseService {
     public List<Course> getPublishedCourses() {
         return courseRepository.findByStatus(CourseStatus.PUBLISHED);
     }
+
     @Override
     public Course isCoursePublished(String courseId) {
         return courseRepository.findByIdAndStatus(courseId, CourseStatus.PUBLISHED);
@@ -182,7 +183,7 @@ public class CourseServiceImpl implements CourseService {
     @Transactional(readOnly = true)
     public VideoLesson getVideoLesson(String courseId, String lessonId) {
         return videoLessonService.getVideoLesson(courseId, lessonId)
-        .orElseThrow(() -> new ValidationException("Video lesson not found with courseId: " + courseId + " and lessonId: " + lessonId));
+                .orElseThrow(() -> new ValidationException("Video lesson not found with courseId: " + courseId + " and lessonId: " + lessonId));
     }
 
     @Override
@@ -206,7 +207,7 @@ public class CourseServiceImpl implements CourseService {
     @Transactional
     public VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson) {
 
-        return videoLessonService.getLessonByCourseIdAndLessonId(courseId,lessonId).map(
+        return videoLessonService.getLessonByCourseIdAndLessonId(courseId, lessonId).map(
                 existing -> {
                     updateVideoLessonFields(existing, lesson);
                     return videoLessonService.updateVideoLesson(existing);
@@ -226,7 +227,7 @@ public class CourseServiceImpl implements CourseService {
     }
 
 
-   private void updateVideoLessonFields(VideoLesson existing, VideoLesson updated) {
+    private void updateVideoLessonFields(VideoLesson existing, VideoLesson updated) {
         if (updated.getTitle() != null) {
             existing.setTitle(updated.getTitle());
         }

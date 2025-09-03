@@ -9,7 +9,9 @@ import java.util.List;
 
 public interface CourseService {
     Course isCoursePublished(String courseId);
+
     void updateCourseStatus(String courseId, CourseStatus status);
+
     List<Course> getPublishedCourses();
 
     Course getPublicCourseDetails(String courseId);
@@ -31,7 +33,9 @@ public interface CourseService {
     VideoLesson getVideoLesson(String courseId, String lessonId);
 
     void deleteVideoLesson(String courseId, String lessonId);
+
     List<VideoLesson> getAllLessonsByCourseId(String courseId);
+
     VideoLesson updateVideoLesson(String courseId, String lessonId, VideoLesson lesson);
 
     List<VideoLesson> getVideoLessonsWithFreePreview(String courseId);

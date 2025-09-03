@@ -2,11 +2,11 @@ package com.notvibecoder.backend.modules.courses.controller;
 
 import com.notvibecoder.backend.core.dto.ApiResponse;
 import com.notvibecoder.backend.core.exception.ValidationException;
-import com.notvibecoder.backend.modules.system.constants.SecurityConstants;
 import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
 import com.notvibecoder.backend.modules.courses.entity.Course;
 import com.notvibecoder.backend.modules.courses.entity.VideoLesson;
 import com.notvibecoder.backend.modules.courses.service.CourseService;
+import com.notvibecoder.backend.modules.system.constants.SecurityConstants;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

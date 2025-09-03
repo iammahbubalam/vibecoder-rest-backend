@@ -19,7 +19,6 @@ public class VideoLessonServiceImpl implements VideoLessonService {
     private final VideoLessonRepository videoLessonRepository;
 
 
-
     @Override
     public List<VideoLesson> getAllLessonsByCourseId(String courseId) {
         return videoLessonRepository.findAllLessonsByCourseId(courseId);
@@ -73,9 +72,10 @@ public class VideoLessonServiceImpl implements VideoLessonService {
         existingLessons.addAll(newLessons);
         return videoLessonRepository.saveAll(existingLessons);
     }
+
     @Override
     @Transactional
-    public VideoLesson updateVideoLesson( VideoLesson lesson) {
+    public VideoLesson updateVideoLesson(VideoLesson lesson) {
         return videoLessonRepository.save(lesson);
     }
 

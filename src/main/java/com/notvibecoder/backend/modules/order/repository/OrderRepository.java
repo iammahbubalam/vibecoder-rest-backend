@@ -1,16 +1,15 @@
 package com.notvibecoder.backend.modules.order.repository;
 
-import java.util.List;
-
+import com.notvibecoder.backend.modules.order.entity.Order;
+import com.notvibecoder.backend.modules.order.entity.OrderStatus;
+import com.notvibecoder.backend.modules.order.entity.PaymentMethod;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import com.notvibecoder.backend.modules.order.entity.Order;
-import com.notvibecoder.backend.modules.order.entity.OrderStatus;
-import com.notvibecoder.backend.modules.order.entity.PaymentMethod;
+import java.util.List;
 
 @Repository
 public interface OrderRepository extends MongoRepository<Order, String> {
@@ -80,46 +79,46 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     /**
      * Generalized search query using MongoDB's flexible querying
      * This uses SpEL (Spring Expression Language) to build dynamic queries
-     * 
+     * <p>
      * The query dynamically includes only non-null parameters:
      * - If parameter is null, it contributes an empty object {} to the $and array
      * - If parameter is not null, it creates the appropriate filter condition
-     * 
+     * <p>
      * Example usage:
      * - searchOrders(null, "course123", null, null, null, null, null, null, null, pageable)
-     *   Results in: { $and: [ {}, { 'courseId': 'course123' }, {}, {}, {}, {}, {}, {}, {} ] }
-     * 
+     * Results in: { $and: [ {}, { 'courseId': 'course123' }, {}, {}, {}, {}, {}, {}, {} ] }
+     * <p>
      * - searchOrders("user123", null, "VERIFIED", null, null, null, "John", startDate, endDate, pageable)
-     *   Results in: { $and: [ 
-     *     { 'userId': 'user123' }, 
-     *     {}, 
-     *     { 'status': 'VERIFIED' }, 
-     *     {}, {}, {}, 
-     *     { $or: [{'userName': {$regex: 'John', $options: 'i'}}, ...] },
-     *     { 'createdAt': { $gte: startDate } },
-     *     { 'createdAt': { $lte: endDate } }
-     *   ] }
+     * Results in: { $and: [
+     * { 'userId': 'user123' },
+     * {},
+     * { 'status': 'VERIFIED' },
+     * {}, {}, {},
+     * { $or: [{'userName': {$regex: 'John', $options: 'i'}}, ...] },
+     * { 'createdAt': { $gte: startDate } },
+     * { 'createdAt': { $lte: endDate } }
+     * ] }
      */
     @Query("{ $and: [ " +
-           "?#{[0] == null ? {} : { 'userId': [0] }}, " +
-           "?#{[1] == null ? {} : { 'courseId': [1] }}, " +
-           "?#{[2] == null ? {} : { 'status': [2] }}, " +
-           "?#{[3] == null ? {} : { 'paymentMethod': [3] }}, " +
-           "?#{[4] == null ? {} : { 'transactionId': { $regex: [4], $options: 'i' } }}, " +
-           "?#{[5] == null ? {} : { 'phoneNumber': { $regex: [5], $options: 'i' } }}, " +
-           "?#{[6] == null ? {} : { $or: [ " +
-           "  { 'userName': { $regex: [6], $options: 'i' } }, " +
-           "  { 'userEmail': { $regex: [6], $options: 'i' } }, " +
-           "  { 'courseTitle': { $regex: [6], $options: 'i' } }, " +
-           "  { 'courseInstructor': { $regex: [6], $options: 'i' } } " +
-           "] }}, " +
-           "?#{[7] == null ? {} : { 'createdAt': { $gte: [7] } }}, " +
-           "?#{[8] == null ? {} : { 'createdAt': { $lte: [8] } }} " +
-           "] }")
-    Page<Order> searchOrders(String userId, String courseId, OrderStatus status, 
-                           PaymentMethod paymentMethod, String transactionId, 
-                           String phoneNumber, String searchText, 
-                           java.time.Instant dateFrom, java.time.Instant dateTo, 
-                           Pageable pageable);
+            "?#{[0] == null ? {} : { 'userId': [0] }}, " +
+            "?#{[1] == null ? {} : { 'courseId': [1] }}, " +
+            "?#{[2] == null ? {} : { 'status': [2] }}, " +
+            "?#{[3] == null ? {} : { 'paymentMethod': [3] }}, " +
+            "?#{[4] == null ? {} : { 'transactionId': { $regex: [4], $options: 'i' } }}, " +
+            "?#{[5] == null ? {} : { 'phoneNumber': { $regex: [5], $options: 'i' } }}, " +
+            "?#{[6] == null ? {} : { $or: [ " +
+            "  { 'userName': { $regex: [6], $options: 'i' } }, " +
+            "  { 'userEmail': { $regex: [6], $options: 'i' } }, " +
+            "  { 'courseTitle': { $regex: [6], $options: 'i' } }, " +
+            "  { 'courseInstructor': { $regex: [6], $options: 'i' } } " +
+            "] }}, " +
+            "?#{[7] == null ? {} : { 'createdAt': { $gte: [7] } }}, " +
+            "?#{[8] == null ? {} : { 'createdAt': { $lte: [8] } }} " +
+            "] }")
+    Page<Order> searchOrders(String userId, String courseId, OrderStatus status,
+                             PaymentMethod paymentMethod, String transactionId,
+                             String phoneNumber, String searchText,
+                             java.time.Instant dateFrom, java.time.Instant dateTo,
+                             Pageable pageable);
 
 }
