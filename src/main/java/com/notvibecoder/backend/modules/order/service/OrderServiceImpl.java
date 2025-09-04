@@ -545,6 +545,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean hasActivePurchase(String userId, String courseId) {
         // Input validation
         if (userId == null || userId.trim().isEmpty()) {
