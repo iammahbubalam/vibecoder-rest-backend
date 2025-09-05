@@ -1,11 +1,12 @@
 package com.notvibecoder.backend.modules.auth.service;
 
-import com.notvibecoder.backend.core.exception.TokenRefreshException;
+import com.notvibecoder.backend.core.exception.auth.TokenExpiredException;
 import com.notvibecoder.backend.modules.auth.entity.RefreshToken;
 import com.notvibecoder.backend.modules.auth.repository.RefreshTokenRepository;
+import com.notvibecoder.backend.modules.auth.security.DeviceSecurityService;
 import com.notvibecoder.backend.modules.system.service.SecurityAuditService;
 import com.notvibecoder.backend.modules.system.service.SessionManagementService;
-import com.notvibecoder.backend.modules.user.security.DeviceSecurityService;
+
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +55,7 @@ public class RefreshTokenService {
         if (!isValidToken(token, request)) {
             String reason = isRevoked(token) ? "revoked" : isExpired(token) ? "expired" : "invalid_device";
             log.warn("Invalid refresh token for user {}: {}", token.getUserId(), reason);
-            throw new TokenRefreshException("Refresh token is " + reason + ". Please log in again.");
+            throw new TokenExpiredException("Refresh token is " + reason + ". Please log in again.");
         }
 
         updateTokenUsage(token);

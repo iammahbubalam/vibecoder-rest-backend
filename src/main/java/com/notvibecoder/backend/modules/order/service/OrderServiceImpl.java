@@ -9,7 +9,7 @@ import com.notvibecoder.backend.modules.order.entity.OrderStatus;
 import com.notvibecoder.backend.modules.order.entity.PaymentMethod;
 import com.notvibecoder.backend.modules.order.repository.OrderRepository;
 import com.notvibecoder.backend.modules.user.entity.User;
-import com.notvibecoder.backend.modules.user.service.UserService;
+import com.notvibecoder.backend.modules.user.service.UserServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -27,7 +27,7 @@ import java.util.List;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
-    private final UserService userService;
+    private final UserServiceImpl userServiceImpl;
     private final CourseService courseService;
 
     @Override
@@ -45,7 +45,7 @@ public class OrderServiceImpl implements OrderService {
 
         try {
             // Validate user exists and is active
-            User user = userService.findById(userId);
+            User user = userServiceImpl.findById(userId);
             if (!user.getEnabled()) {
                 throw new ValidationException("User account is disabled");
             }
@@ -248,7 +248,7 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new ValidationException("Order not found with ID: " + orderId));
 
             // Validate admin exists and has appropriate permissions
-            User admin = userService.findById(adminId);
+            User admin = userServiceImpl.findById(adminId);
             if (!admin.getEnabled()) {
                 throw new ValidationException("Admin account is disabled");
             }
@@ -276,7 +276,7 @@ public class OrderServiceImpl implements OrderService {
 
             // Grant course access to user by adding courseId to user's purchased courses
             try {
-                userService.addPurchasedCourse(order.getUserId(), order.getCourseId());
+                userServiceImpl.addPurchasedCourse(order.getUserId(), order.getCourseId());
                 log.info("Course access granted: Added course {} to user {}", order.getCourseId(), order.getUserId());
             } catch (Exception e) {
                 log.error("Failed to grant course access for order: {} - course: {} to user: {}. Error: {}",
@@ -321,7 +321,7 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new ValidationException("Order not found with ID: " + orderId));
 
             // Validate admin exists and has appropriate permissions
-            User admin = userService.findById(adminId);
+            User admin = userServiceImpl.findById(adminId);
             if (!admin.getEnabled()) {
                 throw new ValidationException("Admin account is disabled");
             }
@@ -387,7 +387,7 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new ValidationException("Order not found with ID: " + orderId));
 
             // Validate admin exists and has appropriate permissions
-            User admin = userService.findById(adminId);
+            User admin = userServiceImpl.findById(adminId);
             if (!admin.getEnabled()) {
                 throw new ValidationException("Admin account is disabled");
             }
@@ -401,7 +401,7 @@ public class OrderServiceImpl implements OrderService {
 
             // Remove course access from user
             try {
-                userService.removePurchasedCourse(order.getUserId(), order.getCourseId());
+                userServiceImpl.removePurchasedCourse(order.getUserId(), order.getCourseId());
                 log.info("Course access revoked: Removed course {} from user {}", order.getCourseId(), order.getUserId());
             } catch (Exception e) {
                 log.error("Failed to revoke course access for order: {} - course: {} from user: {}. Error: {}",
@@ -510,7 +510,7 @@ public class OrderServiceImpl implements OrderService {
 
         try {
             // Validate user exists
-            userService.findById(userId);
+            userServiceImpl.findById(userId);
 
             // Retrieve user's orders with pagination
             return orderRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
@@ -583,7 +583,7 @@ public class OrderServiceImpl implements OrderService {
 
         try {
             // Validate user exists
-            userService.findById(userId);
+            userServiceImpl.findById(userId);
 
             // Find all verified orders for the user and extract course IDs
             List<Order> verifiedOrders = orderRepository.findByUserIdAndStatus(userId, OrderStatus.VERIFIED);

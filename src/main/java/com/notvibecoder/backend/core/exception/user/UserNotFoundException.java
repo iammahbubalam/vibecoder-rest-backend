@@ -1,4 +1,6 @@
-package com.notvibecoder.backend.core.exception;
+package com.notvibecoder.backend.core.exception.user;
+
+import com.notvibecoder.backend.core.exception.BusinessException;
 
 public class UserNotFoundException extends BusinessException {
     public UserNotFoundException(String message) {

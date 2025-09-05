@@ -3,6 +3,7 @@ package com.notvibecoder.backend.shared.config;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.local.LocalBucket;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +31,7 @@ public class RateLimitingConfig {
     /**
      * Rate limit types for different categories of endpoints
      */
+    @Getter
     public enum RateLimitType {
         AUTH_ENDPOINTS("Authentication endpoints - login, logout, OAuth2"),
         TOKEN_REFRESH("Token refresh operations"),
@@ -43,9 +45,6 @@ public class RateLimitingConfig {
             this.description = description;
         }
 
-        public String getDescription() {
-            return description;
-        }
     }
 
     /**

@@ -1,7 +1,7 @@
 package com.notvibecoder.backend.modules.courses.service;
 
-import com.notvibecoder.backend.core.exception.CourseCreationException;
 import com.notvibecoder.backend.core.exception.ValidationException;
+import com.notvibecoder.backend.core.exception.system.DatabaseException;
 import com.notvibecoder.backend.modules.courses.entity.Course;
 import com.notvibecoder.backend.modules.courses.entity.CourseStatus;
 import com.notvibecoder.backend.modules.courses.entity.VideoLesson;
@@ -75,7 +75,7 @@ public class CourseServiceImpl implements CourseService {
 
         } catch (DataAccessException e) {
             log.error("Failed to create course: {}", e.getMessage());
-            throw new CourseCreationException("Failed to create course", e);
+            throw new DatabaseException("CREATE", "Course", e);
         }
     }
 
@@ -114,10 +114,10 @@ public class CourseServiceImpl implements CourseService {
 
         } catch (DataAccessException e) {
             log.error("Failed to update course with ID {}: {}", courseId, e.getMessage());
-            throw new CourseCreationException("Failed to update course", e);
+            throw new DatabaseException("UPDATE", "Course", e);
         } catch (Exception e) {
             log.error("Unexpected error while updating course with ID {}: {}", courseId, e.getMessage());
-            throw new CourseCreationException("Unexpected error occurred while updating course", e);
+            throw new DatabaseException("UPDATE", "Course", e);
         }
     }
 
@@ -158,10 +158,10 @@ public class CourseServiceImpl implements CourseService {
             log.info("Course deleted successfully with ID: {}", courseId);
         } catch (DataAccessException e) {
             log.error("Failed to delete course with ID {}: {}", courseId, e.getMessage());
-            throw new CourseCreationException("Failed to delete course", e);
+            throw new DatabaseException("DELETE", "Course", e);
         } catch (Exception e) {
             log.error("Unexpected error while deleting course with ID {}: {}", courseId, e.getMessage());
-            throw new CourseCreationException("Unexpected error occurred while deleting course", e);
+            throw new DatabaseException("DELETE", "Course", e);
         }
     }
 
@@ -172,10 +172,10 @@ public class CourseServiceImpl implements CourseService {
             return courseRepository.findAll();
         } catch (DataAccessException e) {
             log.error("Failed to retrieve all courses: {}", e.getMessage());
-            throw new CourseCreationException("Failed to retrieve all courses", e);
+            throw new DatabaseException("SELECT", "Course", e);
         } catch (Exception e) {
             log.error("Unexpected error while retrieving all courses: {}", e.getMessage());
-            throw new CourseCreationException("Unexpected error occurred while retrieving all courses", e);
+            throw new DatabaseException("SELECT", "Course", e);
         }
     }
 

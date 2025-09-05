@@ -1,6 +1,6 @@
 package com.notvibecoder.backend.modules.auth.security;
 
-import com.notvibecoder.backend.core.exception.OAuth2AuthenticationProcessingException;
+import com.notvibecoder.backend.core.exception.auth.OAuth2AuthenticationProcessingException;
 import com.notvibecoder.backend.modules.auth.entity.AuthProvider;
 import com.notvibecoder.backend.modules.system.service.AdminService;
 import com.notvibecoder.backend.modules.user.entity.Role;

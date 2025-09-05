@@ -17,8 +17,6 @@ public interface RefreshTokenRepository extends MongoRepository<RefreshToken, St
     @Query("{ 'userId': ?0, 'isRevoked': false }")
     Optional<RefreshToken> findActiveTokenByUserId(String userId);
 
-    // Use naming convention for delete operation
-    void deleteByUserIdAndIsRevoked(String userId, boolean isRevoked);
 
     void deleteByExpiryDateBefore(Instant date);
 
@@ -28,7 +26,6 @@ public interface RefreshTokenRepository extends MongoRepository<RefreshToken, St
     @Query("{ 'ipAddress': ?0, 'createdAt': { $gte: ?1 } }")
     long countByIpAddressAndCreatedAtAfter(String ipAddress, Instant after);
 
-    // ✅ ADDED - Missing method used in service
     boolean existsByUserId(String userId);
 
     List<RefreshToken> findAllByUserId(String userId);

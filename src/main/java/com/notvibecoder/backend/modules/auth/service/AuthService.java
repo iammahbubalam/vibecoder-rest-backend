@@ -1,6 +1,8 @@
 package com.notvibecoder.backend.modules.auth.service;
 
-import com.notvibecoder.backend.core.exception.TokenRefreshException;
+import com.notvibecoder.backend.core.exception.auth.TokenExpiredException;
+import com.notvibecoder.backend.core.exception.auth.AccountDisabledException;
+import com.notvibecoder.backend.core.exception.user.UserNotFoundException;
 import com.notvibecoder.backend.modules.auth.dto.RotatedTokens;
 import com.notvibecoder.backend.modules.auth.security.UserPrincipal;
 import com.notvibecoder.backend.modules.system.service.SessionManagementService;
@@ -28,10 +30,10 @@ public class AuthService {
                 .map(token -> refreshTokenService.verifyRefreshToken(token, request))
                 .map(oldToken -> {
                     var user = userRepository.findById(oldToken.getUserId())
-                            .orElseThrow(() -> new TokenRefreshException("User not found for refresh token."));
+                            .orElseThrow(() -> new UserNotFoundException("User not found for refresh token."));
                     if (!user.getEnabled()) {
                         sessionManagementService.revokeUserSessions(oldToken);
-                        throw new TokenRefreshException("User account is disabled.");
+                        throw new AccountDisabledException("User account is disabled.");
                     }
                     var cookie = refreshTokenService.createRefreshTokenCookie(oldToken.getUserId(), request);
                     String accessToken = jwtService.generateToken(UserPrincipal.create(user, null));
@@ -39,7 +41,7 @@ public class AuthService {
                     log.info("Single session tokens refreshed successfully for user {}", user.getEmail());
                     return new RotatedTokens(accessToken, cookie);
                 })
-                .orElseThrow(() -> new TokenRefreshException("Refresh token not found in database."));
+                .orElseThrow(() -> new TokenExpiredException("Refresh token not found in database."));
     }
 
     @Transactional

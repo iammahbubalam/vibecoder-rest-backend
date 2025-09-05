@@ -1,4 +1,4 @@
-package com.notvibecoder.backend.modules.user.security;
+package com.notvibecoder.backend.modules.auth.security;
 
 import com.notvibecoder.backend.core.dto.DeviceInfo;
 import com.notvibecoder.backend.modules.auth.entity.RefreshToken;

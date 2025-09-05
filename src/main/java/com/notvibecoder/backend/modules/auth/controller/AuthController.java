@@ -88,13 +88,6 @@ public class AuthController {
         )));
     }
 
-    private String extractAccessTokenFromRequest(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7);
-        }
-        return (String) request.getAttribute("jwt");
-    }
 
     @GetMapping("/session-info")
     @PreAuthorize("isAuthenticated()")
@@ -107,5 +100,14 @@ public class AuthController {
                 "timestamp", System.currentTimeMillis()
         ));
     }
+
+    private String extractAccessTokenFromRequest(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return (String) request.getAttribute("jwt");
+    }
+
 
 }
