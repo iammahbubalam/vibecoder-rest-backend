@@ -1,5 +1,6 @@
 package com.notvibecoder.backend.modules.user.service;
 
+import com.notvibecoder.backend.core.exception.ValidationException;
 import com.notvibecoder.backend.core.exception.user.UserNotFoundException;
 import com.notvibecoder.backend.modules.user.dto.UserUpdateRequest;
 import com.notvibecoder.backend.modules.user.entity.Role;
@@ -106,18 +107,18 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void changeUserRole(String userId, String newRole) {
         if (!StringUtils.hasText(userId)) {
-            throw new IllegalArgumentException("User ID cannot be null or empty");
+            throw new ValidationException("User ID cannot be null or empty", "USER_ID_REQUIRED");
         }
-        
+
         if (!StringUtils.hasText(newRole)) {
-            throw new IllegalArgumentException("Role cannot be null or empty");
+            throw new ValidationException("Role cannot be null or empty", "ROLE_REQUIRED");
         }
 
         Role role;
         try {
             role = Role.valueOf(newRole.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid role: " + newRole + ". Valid roles are: USER, ADMIN");
+            throw new ValidationException("Invalid role: " + newRole + ". Valid roles are: USER, ADMIN", "INVALID_ROLE");
         }
 
         User user = findById(userId);
@@ -143,7 +144,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void deleteUser(String userId) {
         if (!StringUtils.hasText(userId)) {
-            throw new IllegalArgumentException("User ID cannot be null or empty");
+            throw new ValidationException("User ID cannot be null or empty", "USER_ID_REQUIRED");
         }
 
         User user = findById(userId); // This will throw UserNotFoundException if user doesn't exist
@@ -174,7 +175,7 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public Page<User> getAllUsers(Pageable pageable) {
         if (pageable == null) {
-            throw new IllegalArgumentException("Pageable cannot be null");
+            throw new ValidationException("Pageable cannot be null", "PAGEABLE_REQUIRED");
         }
         
         log.info("Fetching users with pagination - page: {}, size: {}", 

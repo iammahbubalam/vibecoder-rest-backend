@@ -1,6 +1,8 @@
 package com.notvibecoder.backend.modules.courses.service;
 
 import com.notvibecoder.backend.core.exception.ValidationException;
+import com.notvibecoder.backend.core.exception.course.CourseNotFoundException;
+import com.notvibecoder.backend.core.exception.course.LessonNotFoundException;
 import com.notvibecoder.backend.core.exception.system.DatabaseException;
 import com.notvibecoder.backend.modules.courses.entity.Course;
 import com.notvibecoder.backend.modules.courses.entity.CourseStatus;
@@ -37,7 +39,7 @@ public class CourseServiceImpl implements CourseService {
     @Override
     public void updateCourseStatus(String courseId, CourseStatus status) {
         Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new ValidationException("Course not found with ID: " + courseId));
+                .orElseThrow(() -> new CourseNotFoundException(courseId));
         course.setStatus(status);
         courseRepository.save(course);
     }
@@ -54,7 +56,7 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public Course getCourse(String courseId) {
-        return courseRepository.findById(courseId).orElseThrow(() -> new ValidationException("Course not found with ID: " + courseId));
+        return courseRepository.findById(courseId).orElseThrow(() -> new CourseNotFoundException(courseId));
     }
 
     @Override
@@ -66,7 +68,7 @@ public class CourseServiceImpl implements CourseService {
         course.setTotalLessons(0);
         course.setCreatedAt(Instant.now());
         if (course.getPrice() != null && course.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new ValidationException("Price cannot be negative");
+            throw new ValidationException("Price cannot be negative", "INVALID_PRICE");
         }
         try {
             Course savedCourse = courseRepository.save(course);
@@ -84,21 +86,21 @@ public class CourseServiceImpl implements CourseService {
     public Course updateCourse(String courseId, Course course) {
         // Input validation
         if (courseId == null || courseId.trim().isEmpty()) {
-            throw new ValidationException("Course ID cannot be null or empty");
+            throw new ValidationException("Course ID cannot be null or empty", "COURSE_ID_REQUIRED");
         }
 
         if (course == null) {
-            throw new ValidationException("Course data cannot be null");
+            throw new ValidationException("Course data cannot be null", "COURSE_DATA_REQUIRED");
         }
 
         if (course.getPrice() != null && course.getPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new ValidationException("Price cannot be negative");
+            throw new ValidationException("Price cannot be negative", "INVALID_PRICE");
         }
 
         try {
             // Fetch existing course first
             Course existingCourse = courseRepository.findById(courseId)
-                    .orElseThrow(() -> new ValidationException("Course not found with ID: " + courseId));
+                    .orElseThrow(() -> new CourseNotFoundException(courseId));
 
             // Update course fields with null-safe operations
             updateCourseFields(existingCourse, course);
@@ -147,7 +149,7 @@ public class CourseServiceImpl implements CourseService {
 
                     return savedLessons;
                 })
-                .orElseThrow(() -> new ValidationException("Course not found with ID: " + courseId));
+                .orElseThrow(() -> new CourseNotFoundException(courseId));
     }
 
     @Override
@@ -183,7 +185,7 @@ public class CourseServiceImpl implements CourseService {
     @Transactional(readOnly = true)
     public VideoLesson getVideoLesson(String courseId, String lessonId) {
         return videoLessonService.getVideoLesson(courseId, lessonId)
-                .orElseThrow(() -> new ValidationException("Video lesson not found with courseId: " + courseId + " and lessonId: " + lessonId));
+                .orElseThrow(() -> new LessonNotFoundException(lessonId, courseId));
     }
 
     @Override
@@ -196,7 +198,7 @@ public class CourseServiceImpl implements CourseService {
     public List<VideoLesson> getAllLessonsByCourseId(String courseId) {
         var lessons = videoLessonService.getAllLessonsByCourseId(courseId);
         if (lessons.isEmpty()) {
-            throw new ValidationException("No lessons found for course ID: " + courseId);
+            throw new LessonNotFoundException("any", courseId);
         } else {
             return lessons;
         }
@@ -212,7 +214,7 @@ public class CourseServiceImpl implements CourseService {
                     updateVideoLessonFields(existing, lesson);
                     return videoLessonService.updateVideoLesson(existing);
                 }
-        ).orElseThrow(() -> new ValidationException("Video lesson not found with courseId: " + courseId + " and lessonId: " + lessonId));
+        ).orElseThrow(() -> new LessonNotFoundException(lessonId, courseId));
 
     }
 
@@ -221,7 +223,7 @@ public class CourseServiceImpl implements CourseService {
     public List<VideoLesson> getVideoLessonsWithFreePreview(String courseId) {
         var lessons = videoLessonService.getFreePreviewLessonsByCourseId(courseId);
         if (lessons.isEmpty()) {
-            throw new ValidationException("No free preview lessons found for course ID: " + courseId);
+            throw new LessonNotFoundException("free preview", courseId);
         }
         return lessons;
     }
