@@ -35,10 +35,10 @@ public class OrderServiceImpl implements OrderService {
     public Order createOrder(String userId, String courseId) {
         // Input validation
         if (userId == null || userId.trim().isEmpty()) {
-            throw new ValidationException("User ID cannot be null or empty");
+            throw new ValidationException("User ID cannot be null or empty", "USER_ID_REQUIRED");
         }
         if (courseId == null || courseId.trim().isEmpty()) {
-            throw new ValidationException("Course ID cannot be null or empty");
+            throw new ValidationException("Course ID cannot be null or empty", "COURSE_ID_REQUIRED");
         }
 
         log.info("Creating order for user: {} and course: {}", userId, courseId);
