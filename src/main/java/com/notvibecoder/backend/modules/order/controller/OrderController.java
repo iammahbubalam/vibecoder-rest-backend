@@ -12,6 +12,7 @@ import com.notvibecoder.backend.modules.order.entity.Order;
 import com.notvibecoder.backend.modules.order.entity.OrderStatus;
 import com.notvibecoder.backend.modules.order.entity.PaymentMethod;
 import com.notvibecoder.backend.modules.order.service.OrderService;
+import com.notvibecoder.backend.modules.system.constants.SecurityConstants;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,7 +67,7 @@ public class OrderController {
      * @return Created order details
      */
     @PostMapping
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize(SecurityConstants.ORDER_CREATE)
     public ResponseEntity<ApiResponse<Order>> createOrder(
             @Valid @RequestBody CreateOrderRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -103,7 +104,7 @@ public class OrderController {
      * @return Updated order with payment info
      */
     @PutMapping("/{orderId}/payment")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize(SecurityConstants.ORDER_MANAGE_OWN)
     public ResponseEntity<ApiResponse<Order>> submitPayment(
             @PathVariable String orderId,
             @Valid @RequestBody PaymentSubmissionRequest request,
@@ -149,7 +150,7 @@ public class OrderController {
      * @return Cancelled order details
      */
     @PutMapping("/{orderId}/cancel")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize(SecurityConstants.ORDER_MANAGE_OWN)
     public ResponseEntity<ApiResponse<Order>> cancelOrder(
             @PathVariable String orderId,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -184,7 +185,7 @@ public class OrderController {
      * @return Order details
      */
     @GetMapping("/{orderId}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize(SecurityConstants.ORDER_VIEW_OWN)
     public ResponseEntity<ApiResponse<Order>> getOrder(
             @PathVariable String orderId,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -213,7 +214,7 @@ public class OrderController {
      * GET /api/v1/orders/my-orders
      */
     @GetMapping("/my-orders")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize(SecurityConstants.ORDER_VIEW_OWN)
     public ResponseEntity<ApiResponse<Page<Order>>> getMyOrders(
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) String courseId,
@@ -280,7 +281,7 @@ public class OrderController {
      * @return Approved order details
      */
     @PutMapping("/{orderId}/approve")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(SecurityConstants.ORDER_ADMIN_MANAGE)
     public ResponseEntity<ApiResponse<Order>> approvePayment(
             @PathVariable String orderId,
             @Valid @RequestBody PaymentApprovalRequest request,
@@ -317,7 +318,7 @@ public class OrderController {
      * @return Rejected order details
      */
     @PutMapping("/{orderId}/reject")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(SecurityConstants.ORDER_ADMIN_MANAGE)
     public ResponseEntity<ApiResponse<Order>> rejectPayment(
             @PathVariable String orderId,
             @Valid @RequestBody PaymentRejectionRequest request,
@@ -364,7 +365,7 @@ public class OrderController {
      * - sortDir: Sort direction (asc/desc, default: desc)
      */
     @GetMapping("/search")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(SecurityConstants.ORDER_ADMIN_VIEW)
     public ResponseEntity<ApiResponse<Page<Order>>> searchOrders(
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String courseId,
@@ -440,7 +441,7 @@ public class OrderController {
      * GET /api/v1/orders/my-orders
      */
     @GetMapping("/my-orders")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize(SecurityConstants.ORDER_VIEW_OWN)
     public ResponseEntity<ApiResponse<Page<Order>>> getMyOrders(
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) String courseId,
@@ -500,7 +501,7 @@ public class OrderController {
      * GET /api/v1/orders/by-transaction/{transactionId}
      */
     @GetMapping("/by-transaction/{transactionId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(SecurityConstants.ORDER_ADMIN_VIEW)
     public ResponseEntity<ApiResponse<Page<Order>>> getOrderByTransaction(
             @PathVariable String transactionId,
             @RequestParam(defaultValue = "0") int page,
@@ -542,7 +543,7 @@ public class OrderController {
      * GET /api/v1/orders/status/{status}
      */
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(SecurityConstants.ORDER_ADMIN_VIEW)
     public ResponseEntity<ApiResponse<Page<Order>>> getOrdersByStatus(
             @PathVariable OrderStatus status,
             @RequestParam(defaultValue = "0") int page,
@@ -580,7 +581,7 @@ public class OrderController {
      * GET /api/v1/orders/pending-verification
      */
     @GetMapping("/pending-verification")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(SecurityConstants.ORDER_ADMIN_VIEW)
     public ResponseEntity<ApiResponse<Page<Order>>> getPendingVerificationOrders(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -703,7 +704,7 @@ public class OrderController {
      * GET /api/v1/orders/course/{courseId}/revenue
      */
     @GetMapping("/course/{courseId}/revenue")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(SecurityConstants.ORDER_ADMIN_VIEW)
     public ResponseEntity<ApiResponse<BigDecimal>> getCourseRevenue(
             @PathVariable String courseId) {
 
@@ -849,7 +850,7 @@ public class OrderController {
      * GET /api/v1/orders/check-access/{userId}/{courseId}
      */
     @GetMapping("/check-access/{userId}/{courseId}")
-    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
+    @PreAuthorize(SecurityConstants.ADMIN_OR_OWNER)
     public ResponseEntity<ApiResponse<Boolean>> checkUserCourseAccess(
             @PathVariable String userId,
             @PathVariable String courseId) {

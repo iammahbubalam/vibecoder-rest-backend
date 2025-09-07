@@ -4,6 +4,7 @@ import com.notvibecoder.backend.core.dto.ApiResponse;
 import com.notvibecoder.backend.modules.user.dto.*;
 import com.notvibecoder.backend.modules.user.entity.User;
 import com.notvibecoder.backend.modules.user.service.UserService;
+import com.notvibecoder.backend.modules.system.constants.SecurityConstants;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +23,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/profile")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(SecurityConstants.USER_PROFILE_ACCESS)
     public ResponseEntity<ApiResponse<UserResponseDto>> getCurrentUserProfile(
             @AuthenticationPrincipal UserDetails userDetails) {
 
@@ -32,7 +33,7 @@ public class UserController {
     }
 
     @PutMapping("/profile")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(SecurityConstants.USER_PROFILE_ACCESS)
     public ResponseEntity<ApiResponse<UserResponseDto>> updateProfile(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody UserUpdateRequest updateRequest) {
@@ -42,6 +43,11 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Profile updated", userDto));
     }
 
+    /**
+     * Check if user exists by email - public endpoint but should be rate limited
+     * Note: This endpoint could be used for user enumeration attacks
+     * Consider implementing rate limiting or requiring authentication
+     */
     @PostMapping("/exists")
     public ResponseEntity<ApiResponse<Boolean>> checkUserExists(
             @Valid @RequestBody UserExistsRequest request) {
@@ -51,7 +57,7 @@ public class UserController {
     }
 
     @PostMapping("/profile/courses")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(SecurityConstants.USER_PROFILE_ACCESS)
     public ResponseEntity<ApiResponse<Void>> addPurchasedCourse(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CourseRequest request) {
@@ -62,7 +68,7 @@ public class UserController {
     }
 
     @DeleteMapping("/profile/courses/{courseId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(SecurityConstants.USER_PROFILE_ACCESS)
     public ResponseEntity<ApiResponse<Void>> removePurchasedCourse(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable String courseId) {

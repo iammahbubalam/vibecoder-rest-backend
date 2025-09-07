@@ -5,6 +5,7 @@ import com.notvibecoder.backend.modules.user.dto.UserResponseDto;
 import com.notvibecoder.backend.modules.user.dto.UserRoleChangeRequest;
 import com.notvibecoder.backend.modules.user.entity.User;
 import com.notvibecoder.backend.modules.user.service.UserService;
+import com.notvibecoder.backend.modules.system.constants.SecurityConstants;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize(SecurityConstants.USER_ADMIN_MANAGE)
 public class UserAdminController {
 
     private final UserService userService;

@@ -4,6 +4,7 @@ import com.notvibecoder.backend.core.dto.ApiResponse;
 import com.notvibecoder.backend.core.exception.BusinessException;
 import com.notvibecoder.backend.core.utils.SecurityUtils;
 import com.notvibecoder.backend.modules.auth.service.AuthService;
+import com.notvibecoder.backend.modules.system.constants.SecurityConstants;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,7 +79,7 @@ public class AuthController {
     }
 
     @GetMapping("/validate")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(SecurityConstants.IS_AUTHENTICATED)
     public ResponseEntity<ApiResponse<Map<String, Object>>> validateToken() {
         return ResponseEntity.ok(ApiResponse.success(Map.of(
                 "valid", true,
@@ -90,7 +91,7 @@ public class AuthController {
 
 
     @GetMapping("/session-info")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(SecurityConstants.IS_AUTHENTICATED)
     public ResponseEntity<Map<String, Object>> getSessionInfo(HttpServletRequest request) {
         // This endpoint can provide session information for the single device
         return ResponseEntity.ok(Map.of(

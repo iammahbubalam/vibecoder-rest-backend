@@ -101,6 +101,15 @@ public interface OrderService {
     Order getOrderById(String orderId);
 
     /**
+     * Check if a user owns a specific order
+     *
+     * @param userId  User ID
+     * @param orderId Order ID
+     * @return true if user owns the order, false otherwise
+     */
+    boolean isOwner(String userId, String orderId);
+
+    /**
      * Get user's order history
      *
      * @param userId   User ID

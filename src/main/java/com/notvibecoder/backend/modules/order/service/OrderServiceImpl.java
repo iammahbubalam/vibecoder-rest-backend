@@ -463,6 +463,40 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean isOwner(String userId, String orderId) {
+        // Input validation
+        if (userId == null || userId.trim().isEmpty()) {
+            throw new ValidationException("User ID cannot be null or empty", "USER_ID_REQUIRED");
+        }
+        if (orderId == null || orderId.trim().isEmpty()) {
+            throw new ValidationException("Order ID cannot be null or empty", "ORDER_ID_REQUIRED");
+        }
+
+        log.debug("Checking ownership for user: {} and order: {}", userId, orderId);
+
+        try {
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new OrderNotFoundException(orderId));
+            
+            boolean isOwner = userId.equals(order.getUserId());
+            log.debug("User {} {} owner of order {}", userId, isOwner ? "IS" : "IS NOT", orderId);
+            
+            return isOwner;
+            
+        } catch (OrderNotFoundException e) {
+            // If order doesn't exist, user doesn't own it
+            log.debug("Order {} not found, user {} is not owner", orderId, userId);
+            return false;
+        } catch (Exception e) {
+            log.error("Unexpected error checking ownership for user: {} and order: {}: {}", 
+                     userId, orderId, e.getMessage(), e);
+            // In case of error, deny ownership for security
+            return false;
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<Order> getUserOrders(String userId, Pageable pageable) {
         // Input validation
         if (userId == null || userId.trim().isEmpty()) {
