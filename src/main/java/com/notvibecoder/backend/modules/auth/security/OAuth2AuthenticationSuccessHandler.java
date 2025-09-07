@@ -61,20 +61,19 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     /**
      * Extracts UserPrincipal from authentication object.
-     * Throws exception if principal is not of expected type.
+     * Handles both UserPrincipal (expected) and any OAuth2User types during transition.
      */
     private UserPrincipal extractUserPrincipal(Authentication authentication) {
         Object principal = authentication.getPrincipal();
 
-        if (!(principal instanceof UserPrincipal userPrincipal)) {
-            log.error("Expected UserPrincipal but got: {}. Check CustomOAuth2UserService configuration.",
-                    principal.getClass().getSimpleName());
-            throw new IllegalStateException("Invalid principal type: " + principal.getClass().getSimpleName());
+        if (principal instanceof UserPrincipal userPrincipal) {
+            log.info("Successfully extracted UserPrincipal for user: {}", userPrincipal.getEmail());
+            return userPrincipal;
         }
 
-        log.info("Successfully extracted UserPrincipal for user: {}", userPrincipal.getEmail());
-
-        return userPrincipal;
+        log.error("Expected UserPrincipal but got: {}. Check CustomOAuth2UserService configuration.",
+                principal.getClass().getSimpleName());
+        throw new IllegalStateException("Invalid principal type: " + principal.getClass().getSimpleName());
     }
 
     /**

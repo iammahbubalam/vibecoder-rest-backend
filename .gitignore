@@ -50,4 +50,4 @@ logs/
 .DS_Store
 Thumbs.db
 
-MODULAR_MONOLITH_REFACTORING_PLAN.md
+src/main/resources/application.properties
