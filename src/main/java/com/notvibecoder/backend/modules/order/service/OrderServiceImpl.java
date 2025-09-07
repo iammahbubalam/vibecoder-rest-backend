@@ -1,6 +1,15 @@
 package com.notvibecoder.backend.modules.order.service;
 
+import com.notvibecoder.backend.core.exception.DuplicateResourceException;
 import com.notvibecoder.backend.core.exception.ValidationException;
+import com.notvibecoder.backend.core.exception.course.CourseNotPublishedException;
+import com.notvibecoder.backend.core.exception.order.DuplicateTransactionException;
+import com.notvibecoder.backend.core.exception.order.InvalidOrderStateException;
+import com.notvibecoder.backend.core.exception.order.OrderAuthorizationException;
+import com.notvibecoder.backend.core.exception.order.OrderNotFoundException;
+import com.notvibecoder.backend.core.exception.order.PaymentVerificationException;
+import com.notvibecoder.backend.core.exception.system.DatabaseException;
+import com.notvibecoder.backend.core.exception.user.InvalidUserStateException;
 import com.notvibecoder.backend.modules.courses.entity.Course;
 import com.notvibecoder.backend.modules.courses.entity.CourseStatus;
 import com.notvibecoder.backend.modules.courses.service.CourseService;
@@ -47,32 +56,30 @@ public class OrderServiceImpl implements OrderService {
             // Validate user exists and is active
             User user = userServiceImpl.findById(userId);
             if (!user.getEnabled()) {
-                throw new ValidationException("User account is disabled");
+                log.warn("Attempt to create order by disabled user: {}", userId);
+                throw new InvalidUserStateException(userId, "DISABLED", "create order");
             }
 
-            // Validate course exists and is published
             Course course = courseService.getCourse(courseId);
             if (course.getStatus() != CourseStatus.PUBLISHED) {
-                throw new ValidationException("Course is not available for purchase");
+                log.warn("Attempt to create order for unpublished course: {}", courseId);
+                throw new CourseNotPublishedException(courseId);
             }
 
-            // Check if user already has an active order or purchase for this course
             boolean hasExistingPurchase = hasActivePurchase(userId, courseId);
             if (hasExistingPurchase) {
-                throw new ValidationException("User already has access to this course");
+                log.warn("User: {} already has an active purchase for course: {}", userId, courseId);
+                throw new DuplicateResourceException("Order", "courseId", courseId);
             }
 
-            // Calculate pricing
             BigDecimal coursePrice = course.getPrice();
             BigDecimal totalAmount = calculateDiscountedPrice(course.getDiscountPrice(), courseId, coursePrice);
 
 
-            // Ensure total amount is not negative
             if (totalAmount.compareTo(BigDecimal.ZERO) < 0) {
                 totalAmount = BigDecimal.ZERO;
             }
 
-            // Build order entity
             Order order = Order.builder()
                     .userId(userId)
                     .courseId(courseId)
@@ -80,14 +87,11 @@ public class OrderServiceImpl implements OrderService {
                     .coursePrice(coursePrice)
                     .discountAmount(course.getDiscountPrice())
                     .totalAmount(totalAmount)
-                    // Course snapshot for historical reference
                     .courseTitle(course.getTitle())
                     .courseInstructor(course.getInstructorName())
                     .courseThumbnailUrl(course.getThumbnailUrl())
-                    // User snapshot for admin reference
                     .userName(user.getName())
                     .userEmail(user.getEmail())
-                    // Metadata
                     .currency("BDT")
                     .build();
 
@@ -100,16 +104,14 @@ public class OrderServiceImpl implements OrderService {
             return savedOrder;
 
         } catch (DataIntegrityViolationException e) {
-            // Handle unique constraint violation (user already has order for this course)
             log.warn("Duplicate order attempt for user: {} and course: {}", userId, courseId);
-            throw new ValidationException("An order for this course already exists");
+            throw new DuplicateResourceException("Order", "courseId", courseId);
         } catch (ValidationException e) {
-            // Re-throw validation exceptions
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error creating order for user: {} and course: {}: {}",
                     userId, courseId, e.getMessage(), e);
-            throw new ValidationException("Failed to create order: " + e.getMessage());
+            throw new DatabaseException("create", "Order", e);
         }
     }
 
@@ -120,46 +122,39 @@ public class OrderServiceImpl implements OrderService {
                                String paymentNote) {
         // Input validation
         if (orderId == null || orderId.trim().isEmpty()) {
-            throw new ValidationException("Order ID cannot be null or empty");
+           throw new ValidationException("Order ID cannot be null or empty", "ORDER_ID_REQUIRED");
         }
         if (paymentMethod == null) {
-            throw new ValidationException("Payment method is required");
+            throw new ValidationException("Payment method is required", "PAYMENT_METHOD_REQUIRED");
         }
         if (transactionId == null || transactionId.trim().isEmpty()) {
-            throw new ValidationException("Transaction ID is required");
+            throw new ValidationException("Transaction ID is required", "TRANSACTION_ID_REQUIRED");
         }
         if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
-            throw new ValidationException("Phone number is required");
+            throw new ValidationException("Phone number is required", "PHONE_NUMBER_REQUIRED");
         }
 
         log.info("Submitting payment for order: {} with transaction: {}", orderId, transactionId);
 
         try {
-            // Find and validate order
             Order order = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new ValidationException("Order not found with ID: " + orderId));
-
-            // Check if order is in correct status for payment submission
+                    .orElseThrow(() -> new OrderNotFoundException(orderId));
             if (order.getStatus() != OrderStatus.PENDING) {
-                throw new ValidationException("Order is not in pending status. Current status: " + order.getStatus());
+                throw new InvalidOrderStateException(orderId, order.getStatus().toString(), "PENDING", "submit payment");
             }
-
-            // Check for duplicate transaction ID
             if (orderRepository.existsByTransactionIdAndStatus(transactionId, OrderStatus.PENDING)) {
-                throw new ValidationException("Transaction ID already exists for another pending order");
+                throw new DuplicateTransactionException(transactionId);
             }
 
-            // Update order with payment information
+
             order.setPaymentMethod(paymentMethod);
             order.setTransactionId(transactionId);
             order.setPhoneNumber(phoneNumber);
             order.setPaymentReferenceNote(paymentNote);
             order.setStatus(OrderStatus.SUBMITTED);
             order.setLastPaymentAttemptAt(java.time.Instant.now());
+            order.setAdminNote("Payment submitted, pending verification");
 
-            // Note: Status remains PENDING - admin will verify and change to VERIFIED
-
-            // Save updated order
             Order updatedOrder = orderRepository.save(order);
 
             log.info("Payment submitted successfully for order: {} with transaction: {}",
@@ -168,16 +163,16 @@ public class OrderServiceImpl implements OrderService {
             return updatedOrder;
 
         } catch (DataIntegrityViolationException e) {
-            // Handle unique constraint violations (e.g., duplicate transaction ID)
             log.warn("Data integrity violation when submitting payment for order: {}", orderId);
-            throw new ValidationException("Transaction ID already exists or duplicate payment submission");
+            throw new DuplicateTransactionException(transactionId);
         } catch (ValidationException e) {
-            // Re-throw validation exceptions
+            log.warn("Validation error when submitting payment for order: {}: {}",
+                    orderId, e.getMessage());
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error submitting payment for order: {}: {}",
                     orderId, e.getMessage(), e);
-            throw new ValidationException("Failed to submit payment: " + e.getMessage());
+            throw new DatabaseException("update", "Order", e);
         }
     }
 
@@ -186,28 +181,26 @@ public class OrderServiceImpl implements OrderService {
     public Order cancelOrder(String orderId, String userId) {
         // Input validation
         if (orderId == null || orderId.trim().isEmpty()) {
-            throw new ValidationException("Order ID cannot be null or empty");
+            throw new ValidationException("Order ID cannot be null or empty", "ORDER_ID_REQUIRED");
         }
         if (userId == null || userId.trim().isEmpty()) {
-            throw new ValidationException("User ID cannot be null or empty");
+            throw new ValidationException("User ID cannot be null or empty", "USER_ID_REQUIRED");
         }
 
         log.info("Cancelling order: {} for user: {}", orderId, userId);
 
         try {
-            // Find and validate order
             Order order = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new ValidationException("Order not found with ID: " + orderId));
+                    .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-            // Authorization check - ensure user owns this order
             if (!order.getUserId().equals(userId)) {
                 log.warn("Unauthorized cancel attempt - Order: {} does not belong to user: {}", orderId, userId);
-                throw new ValidationException("You are not authorized to cancel this order");
+               throw new OrderAuthorizationException(orderId, userId, "cancel");
             }
 
             // Business rule - only allow cancellation for PENDING orders
             if (order.getStatus() != OrderStatus.PENDING) {
-                throw new ValidationException("Order cannot be cancelled. Current status: " + order.getStatus());
+                throw new InvalidOrderStateException(orderId, order.getStatus().toString(), "PENDING", "cancel");
             }
 
             // Update order status to REJECTED (reusing existing enum value for cancelled orders)
@@ -225,7 +218,7 @@ public class OrderServiceImpl implements OrderService {
         } catch (Exception e) {
             log.error("Unexpected error cancelling order: {} for user: {}: {}",
                     orderId, userId, e.getMessage(), e);
-            throw new ValidationException("Failed to cancel order: " + e.getMessage());
+           throw new DatabaseException("update", "Order", e);
         }
     }
 
@@ -234,47 +227,36 @@ public class OrderServiceImpl implements OrderService {
     public Order approvePayment(String orderId, String adminId, String adminNote) {
         // Input validation
         if (orderId == null || orderId.trim().isEmpty()) {
-            throw new ValidationException("Order ID cannot be null or empty");
+           throw new ValidationException("Order ID cannot be null or empty", "ORDER_ID_REQUIRED");
         }
         if (adminId == null || adminId.trim().isEmpty()) {
-            throw new ValidationException("Admin ID cannot be null or empty");
+             throw new ValidationException("Admin ID cannot be null or empty", "ADMIN_ID_REQUIRED");
         }
 
         log.info("Approving payment for order: {} by admin: {}", orderId, adminId);
 
         try {
-            // Find and validate order
             Order order = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new ValidationException("Order not found with ID: " + orderId));
+                    .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-            // Validate admin exists and has appropriate permissions
             User admin = userServiceImpl.findById(adminId);
             if (!admin.getEnabled()) {
-                throw new ValidationException("Admin account is disabled");
+                throw new InvalidUserStateException(adminId, "DISABLED", "approve payment");
             }
-
-
-            // Business rule - only allow approval for SUBMITTED orders
             if (order.getStatus() != OrderStatus.SUBMITTED) {
-                throw new ValidationException("Order cannot be approved. Current status: " + order.getStatus() +
-                        ". Only SUBMITTED orders can be approved.");
+                throw new InvalidOrderStateException(orderId, order.getStatus().toString(), "SUBMITTED", "approve");
             }
 
-            // Validate payment information exists
+ 
             if (order.getTransactionId() == null || order.getTransactionId().trim().isEmpty()) {
-                throw new ValidationException("Order does not have payment information to approve");
+                throw new PaymentVerificationException(orderId, "No payment information available");
             }
-
-            // Update order status and admin information
             order.setStatus(OrderStatus.VERIFIED);
             order.setVerifiedBy(adminId);
             order.setVerifiedAt(java.time.Instant.now());
             order.setAdminNote(adminNote);
 
-            // Save updated order
             Order approvedOrder = orderRepository.save(order);
-
-            // Grant course access to user by adding courseId to user's purchased courses
             try {
                 userServiceImpl.addPurchasedCourse(order.getUserId(), order.getCourseId());
                 log.info("Course access granted: Added course {} to user {}", order.getCourseId(), order.getUserId());
@@ -285,9 +267,6 @@ public class OrderServiceImpl implements OrderService {
 
             log.info("Payment approved successfully for order: {} by admin: {}. User {} now has access to course: {}",
                     orderId, adminId, order.getUserId(), order.getCourseId());
-
-            // TODO: Optionally trigger course access grant notification or other side effects
-
             return approvedOrder;
 
         } catch (ValidationException e) {
@@ -295,7 +274,7 @@ public class OrderServiceImpl implements OrderService {
         } catch (Exception e) {
             log.error("Unexpected error approving payment for order: {} by admin: {}: {}",
                     orderId, adminId, e.getMessage(), e);
-            throw new ValidationException("Failed to approve payment: " + e.getMessage());
+            throw new DatabaseException("update", "Order", e);
         }
     }
 
@@ -304,38 +283,29 @@ public class OrderServiceImpl implements OrderService {
     public Order rejectPayment(String orderId, String adminId, String rejectionReason) {
         // Input validation
         if (orderId == null || orderId.trim().isEmpty()) {
-            throw new ValidationException("Order ID cannot be null or empty");
+            throw new ValidationException("Order ID cannot be null or empty", "ORDER_ID_REQUIRED");
         }
         if (adminId == null || adminId.trim().isEmpty()) {
-            throw new ValidationException("Admin ID cannot be null or empty");
+            throw new ValidationException("Admin ID cannot be null or empty", "ADMIN_ID_REQUIRED");
         }
         if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
-            throw new ValidationException("Rejection reason is required");
+            throw new ValidationException("Rejection reason is required", "REJECTION_REASON_REQUIRED");
         }
 
         log.info("Rejecting payment for order: {} by admin: {}", orderId, adminId);
 
         try {
-            // Find and validate order
             Order order = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new ValidationException("Order not found with ID: " + orderId));
-
-            // Validate admin exists and has appropriate permissions
+                    .orElseThrow(() -> new OrderNotFoundException(orderId));
             User admin = userServiceImpl.findById(adminId);
             if (!admin.getEnabled()) {
-                throw new ValidationException("Admin account is disabled");
+                throw new InvalidUserStateException(adminId, "DISABLED", "reject payment");
             }
-            // Additional admin role validation could be added here based on your User entity structure
-
-            // Business rule - only allow rejection for SUBMITTED orders
             if (order.getStatus() != OrderStatus.SUBMITTED) {
-                throw new ValidationException("Order cannot be rejected. Current status: " + order.getStatus() +
-                        ". Only SUBMITTED orders can be rejected.");
+                throw new InvalidOrderStateException(orderId, order.getStatus().toString(), "SUBMITTED", "reject");
             }
-
-            // Validate payment information exists
             if (order.getTransactionId() == null || order.getTransactionId().trim().isEmpty()) {
-                throw new ValidationException("Order does not have payment information to reject");
+                throw new PaymentVerificationException(orderId, "No payment information to reject");
             }
 
             // Update order status and admin information
@@ -351,8 +321,6 @@ public class OrderServiceImpl implements OrderService {
             log.info("Payment rejected successfully for order: {} by admin: {}. Reason: {}",
                     orderId, adminId, rejectionReason);
 
-            // TODO: Optionally trigger rejection notification to user
-
             return rejectedOrder;
 
         } catch (ValidationException e) {
@@ -361,7 +329,7 @@ public class OrderServiceImpl implements OrderService {
         } catch (Exception e) {
             log.error("Unexpected error rejecting payment for order: {} by admin: {}: {}",
                     orderId, adminId, e.getMessage(), e);
-            throw new ValidationException("Failed to reject payment: " + e.getMessage());
+            throw new DatabaseException("update", "Order", e);
         }
     }
 
@@ -370,13 +338,13 @@ public class OrderServiceImpl implements OrderService {
     public Order revokeAccess(String orderId, String adminId, String revocationReason) {
         // Input validation
         if (orderId == null || orderId.trim().isEmpty()) {
-            throw new ValidationException("Order ID cannot be null or empty");
+            throw new ValidationException("Order ID cannot be null or empty", "ORDER_ID_REQUIRED");
         }
         if (adminId == null || adminId.trim().isEmpty()) {
-            throw new ValidationException("Admin ID cannot be null or empty");
+            throw new ValidationException("Admin ID cannot be null or empty", "ADMIN_ID_REQUIRED");
         }
         if (revocationReason == null || revocationReason.trim().isEmpty()) {
-            throw new ValidationException("Revocation reason is required");
+            throw new ValidationException("Revocation reason is required", "REVOCATION_REASON_REQUIRED");
         }
 
         log.info("Revoking course access for order: {} by admin: {}", orderId, adminId);
@@ -384,19 +352,18 @@ public class OrderServiceImpl implements OrderService {
         try {
             // Find and validate order
             Order order = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new ValidationException("Order not found with ID: " + orderId));
+                    .orElseThrow(() -> new OrderNotFoundException(orderId));
 
             // Validate admin exists and has appropriate permissions
             User admin = userServiceImpl.findById(adminId);
             if (!admin.getEnabled()) {
-                throw new ValidationException("Admin account is disabled");
+                throw new InvalidUserStateException(adminId, "DISABLED", "revoke access");
             }
             // Additional admin role validation could be added here based on your User entity structure
 
             // Business rule - only allow revocation for VERIFIED orders (active course access)
             if (order.getStatus() != OrderStatus.VERIFIED) {
-                throw new ValidationException("Order cannot be revoked. Current status: " + order.getStatus() +
-                        ". Only VERIFIED orders can be revoked.");
+                throw new InvalidOrderStateException(orderId, order.getStatus().toString(), "VERIFIED", "revoke");
             }
 
             // Remove course access from user
@@ -422,7 +389,6 @@ public class OrderServiceImpl implements OrderService {
             log.info("Course access revoked successfully for order: {} by admin: {}. Reason: {}",
                     orderId, adminId, revocationReason);
 
-            // TODO: Optionally trigger revocation notification to user
 
             return revokedOrder;
 
@@ -432,7 +398,7 @@ public class OrderServiceImpl implements OrderService {
         } catch (Exception e) {
             log.error("Unexpected error revoking access for order: {} by admin: {}: {}",
                     orderId, adminId, e.getMessage(), e);
-            throw new ValidationException("Failed to revoke access: " + e.getMessage());
+            throw new DatabaseException("update", "Order", e);
         }
     }
 
@@ -441,10 +407,10 @@ public class OrderServiceImpl implements OrderService {
     public Order getOrder(String orderId, String userId) {
         // Input validation
         if (orderId == null || orderId.trim().isEmpty()) {
-            throw new ValidationException("Order ID cannot be null or empty");
+            throw new ValidationException("Order ID cannot be null or empty", "ORDER_ID_REQUIRED");
         }
         if (userId == null || userId.trim().isEmpty()) {
-            throw new ValidationException("User ID cannot be null or empty");
+            throw new ValidationException("User ID cannot be null or empty", "USER_ID_REQUIRED");
         }
 
         log.debug("Retrieving order: {} for user: {}", orderId, userId);
@@ -452,12 +418,12 @@ public class OrderServiceImpl implements OrderService {
         try {
             // Find and validate order
             Order order = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new ValidationException("Order not found with ID: " + orderId));
+                    .orElseThrow(() -> new OrderNotFoundException(orderId));
 
             // Authorization check - ensure user owns this order
             if (!order.getUserId().equals(userId)) {
                 log.warn("Unauthorized access attempt - Order: {} does not belong to user: {}", orderId, userId);
-                throw new ValidationException("You are not authorized to view this order");
+                throw new OrderAuthorizationException(orderId, userId, "view");
             }
 
             return order;
@@ -468,7 +434,7 @@ public class OrderServiceImpl implements OrderService {
         } catch (Exception e) {
             log.error("Unexpected error retrieving order: {} for user: {}: {}",
                     orderId, userId, e.getMessage(), e);
-            throw new ValidationException("Failed to retrieve order: " + e.getMessage());
+            throw new DatabaseException("retrieve", "Order", e);
         }
     }
 
@@ -477,21 +443,21 @@ public class OrderServiceImpl implements OrderService {
     public Order getOrderById(String orderId) {
         // Input validation
         if (orderId == null || orderId.trim().isEmpty()) {
-            throw new ValidationException("Order ID cannot be null or empty");
+            throw new ValidationException("Order ID cannot be null or empty", "ORDER_ID_REQUIRED");
         }
 
         log.debug("Retrieving order by ID: {}", orderId);
 
         try {
             return orderRepository.findById(orderId)
-                    .orElseThrow(() -> new ValidationException("Order not found with ID: " + orderId));
+                    .orElseThrow(() -> new OrderNotFoundException(orderId));
 
         } catch (ValidationException e) {
             // Re-throw validation exceptions
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error retrieving order by ID: {}: {}", orderId, e.getMessage(), e);
-            throw new ValidationException("Failed to retrieve order: " + e.getMessage());
+            throw new DatabaseException("retrieve", "Order", e);
         }
     }
 
@@ -500,10 +466,10 @@ public class OrderServiceImpl implements OrderService {
     public Page<Order> getUserOrders(String userId, Pageable pageable) {
         // Input validation
         if (userId == null || userId.trim().isEmpty()) {
-            throw new ValidationException("User ID cannot be null or empty");
+            throw new ValidationException("User ID cannot be null or empty", "USER_ID_REQUIRED");
         }
         if (pageable == null) {
-            throw new ValidationException("Pageable cannot be null");
+            throw new ValidationException("Pageable cannot be null", "PAGEABLE_REQUIRED");
         }
 
         log.debug("Retrieving orders for user: {} with pagination: {}", userId, pageable);
@@ -520,7 +486,7 @@ public class OrderServiceImpl implements OrderService {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error retrieving orders for user: {}: {}", userId, e.getMessage(), e);
-            throw new ValidationException("Failed to retrieve user orders: " + e.getMessage());
+            throw new DatabaseException("retrieve", "Order", e);
         }
     }
 
@@ -529,7 +495,7 @@ public class OrderServiceImpl implements OrderService {
     public Page<Order> getAllOrders(Pageable pageable) {
         // Input validation
         if (pageable == null) {
-            throw new ValidationException("Pageable cannot be null");
+            throw new ValidationException("Pageable cannot be null", "PAGEABLE_REQUIRED");
         }
 
         log.debug("Retrieving all orders with pagination: {}", pageable);
@@ -540,7 +506,7 @@ public class OrderServiceImpl implements OrderService {
 
         } catch (Exception e) {
             log.error("Unexpected error retrieving all orders: {}", e.getMessage(), e);
-            throw new ValidationException("Failed to retrieve orders: " + e.getMessage());
+            throw new DatabaseException("retrieve", "Order", e);
         }
     }
 
@@ -576,7 +542,7 @@ public class OrderServiceImpl implements OrderService {
     public List<String> getUserPurchasedCourseIds(String userId) {
         // Input validation
         if (userId == null || userId.trim().isEmpty()) {
-            throw new ValidationException("User ID cannot be null or empty");
+            throw new ValidationException("User ID cannot be null or empty", "USER_ID_REQUIRED");
         }
 
         log.debug("Retrieving purchased course IDs for user: {}", userId);
@@ -602,7 +568,7 @@ public class OrderServiceImpl implements OrderService {
         } catch (Exception e) {
             log.error("Unexpected error retrieving purchased course IDs for user: {}: {}",
                     userId, e.getMessage(), e);
-            throw new ValidationException("Failed to retrieve purchased courses: " + e.getMessage());
+            throw new DatabaseException("retrieve", "Order", e);
         }
     }
 
@@ -610,10 +576,10 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public Page<Order> getOrdersByStatus(OrderStatus status, Pageable pageable) {
         if (status == null) {
-            throw new ValidationException("Order status cannot be null");
+            throw new ValidationException("Order status cannot be null", "ORDER_STATUS_REQUIRED");
         }
         if (pageable == null) {
-            throw new ValidationException("Pageable cannot be null");
+            throw new ValidationException("Pageable cannot be null", "PAGEABLE_REQUIRED");
         }
 
         log.debug("Retrieving orders with status: {} and pagination: {}", status, pageable);
@@ -622,7 +588,7 @@ public class OrderServiceImpl implements OrderService {
             return orderRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
         } catch (Exception e) {
             log.error("Error retrieving orders by status {}: {}", status, e.getMessage(), e);
-            throw new ValidationException("Failed to retrieve orders by status");
+            throw new DatabaseException("retrieve", "Order", e);
         }
     }
 
@@ -630,7 +596,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public Page<Order> getPendingVerificationOrders(Pageable pageable) {
         if (pageable == null) {
-            throw new ValidationException("Pageable cannot be null");
+            throw new ValidationException("Pageable cannot be null", "PAGEABLE_REQUIRED");
         }
 
         log.debug("Retrieving pending verification orders with pagination: {}", pageable);
@@ -639,7 +605,7 @@ public class OrderServiceImpl implements OrderService {
             return orderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.SUBMITTED, pageable);
         } catch (Exception e) {
             log.error("Error retrieving pending verification orders: {}", e.getMessage(), e);
-            throw new ValidationException("Failed to retrieve pending verification orders");
+            throw new DatabaseException("retrieve", "Order", e);
         }
     }
 
@@ -650,7 +616,7 @@ public class OrderServiceImpl implements OrderService {
                                     Pageable pageable) {
 
         if (pageable == null) {
-            throw new ValidationException("Pageable cannot be null");
+            throw new ValidationException("Pageable cannot be null", "PAGEABLE_REQUIRED");
         }
 
         log.debug("Searching orders with filters - userId: {}, courseId: {}, status: {}, paymentMethod: {}, " +
@@ -687,7 +653,7 @@ public class OrderServiceImpl implements OrderService {
             throw e;
         } catch (Exception e) {
             log.error("Error searching orders: {}", e.getMessage(), e);
-            throw new ValidationException("Failed to search orders: " + e.getMessage());
+            throw new DatabaseException("search", "Order", e);
         }
     }
 
@@ -697,7 +663,7 @@ public class OrderServiceImpl implements OrderService {
     public BigDecimal getCourseRevenue(String courseId) {
         // Input validation
         if (courseId == null || courseId.trim().isEmpty()) {
-            throw new ValidationException("Course ID cannot be null or empty");
+            throw new ValidationException("Course ID cannot be null or empty", "COURSE_ID_REQUIRED");
         }
 
         log.debug("Calculating revenue for course: {}", courseId);
@@ -724,7 +690,7 @@ public class OrderServiceImpl implements OrderService {
             throw e;
         } catch (Exception e) {
             log.error("Error calculating revenue for course {}: {}", courseId, e.getMessage(), e);
-            throw new ValidationException("Failed to calculate course revenue: " + e.getMessage());
+            throw new DatabaseException("calculate", "Revenue", e);
         }
     }
 
@@ -769,7 +735,7 @@ public class OrderServiceImpl implements OrderService {
 
         } catch (Exception e) {
             log.error("Error calculating order statistics: {}", e.getMessage(), e);
-            throw new ValidationException("Failed to calculate order statistics: " + e.getMessage());
+            throw new DatabaseException("calculate", "Statistics", e);
         }
     }
 
@@ -778,10 +744,10 @@ public class OrderServiceImpl implements OrderService {
     public List<DailyOrderSummary> getDailyOrderSummary(int days) {
         // Input validation
         if (days <= 0) {
-            throw new ValidationException("Days must be a positive number");
+            throw new ValidationException("Days must be a positive number", "INVALID_DAYS");
         }
         if (days > 365) {
-            throw new ValidationException("Cannot retrieve more than 365 days of data");
+            throw new ValidationException("Cannot retrieve more than 365 days of data", "DAYS_LIMIT_EXCEEDED");
         }
 
         log.debug("Generating daily order summary for {} days", days);
@@ -834,7 +800,7 @@ public class OrderServiceImpl implements OrderService {
             throw e;
         } catch (Exception e) {
             log.error("Error generating daily order summary: {}", e.getMessage(), e);
-            throw new ValidationException("Failed to generate daily order summary: " + e.getMessage());
+            throw new DatabaseException("generate", "Summary", e);
         }
     }
 
@@ -879,7 +845,7 @@ public class OrderServiceImpl implements OrderService {
 
         } catch (Exception e) {
             log.error("Error processing expired orders: {}", e.getMessage(), e);
-            throw new ValidationException("Failed to process expired orders: " + e.getMessage());
+            throw new DatabaseException("process", "ExpiredOrders", e);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.notvibecoder.backend.modules.courses.service;
 
+import com.notvibecoder.backend.core.exception.ValidationException;
 import com.notvibecoder.backend.modules.courses.entity.VideoLesson;
 import com.notvibecoder.backend.modules.courses.repository.VideoLessonRepository;
 import lombok.RequiredArgsConstructor;
@@ -51,10 +52,10 @@ public class VideoLessonServiceImpl implements VideoLessonService {
         log.info("Adding {} video lessons to course: {}", newLessons.size(), courseId);
 
         if (courseId == null || courseId.trim().isEmpty()) {
-            throw new IllegalArgumentException("Course ID cannot be null or empty");
+           throw new ValidationException("Course ID cannot be null or empty", "COURSE_ID_REQUIRED");
         }
         if (newLessons == null || newLessons.isEmpty()) {
-            throw new IllegalArgumentException("Lessons list cannot be null or empty");
+            throw new ValidationException("Lessons list cannot be null or empty", "LESSONS_REQUIRED");
         }
 
         List<VideoLesson> existingLessons = videoLessonRepository.findAllLessonsByCourseId(courseId);

@@ -1,15 +1,22 @@
 package com.notvibecoder.backend.modules.common.controller.advice;
 
 import com.notvibecoder.backend.core.dto.ApiResponse;
-import com.notvibecoder.backend.core.exception.BusinessException;
-import com.notvibecoder.backend.core.exception.ValidationException;
+import com.notvibecoder.backend.core.exception.*;
+import com.notvibecoder.backend.core.exception.auth.*;
+import com.notvibecoder.backend.core.exception.course.*;
+import com.notvibecoder.backend.core.exception.order.*;
+import com.notvibecoder.backend.core.exception.user.*;
+import com.notvibecoder.backend.core.exception.system.*;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -26,12 +33,14 @@ import java.util.UUID;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    // ==================== BUSINESS EXCEPTIONS ====================
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(
             BusinessException ex, WebRequest request) {
-
+        
         String correlationId = generateCorrelationId();
-        log.warn("Business exception [{}]: {} - Code: {}",
+        log.warn("Business exception [{}]: {} - Code: {}", 
                 correlationId, ex.getMessage(), ex.getErrorCode());
 
         ApiResponse<Void> response = ApiResponse.<Void>builder()
@@ -48,7 +57,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationException(
             ValidationException ex, WebRequest request) {
-
+        
         String correlationId = generateCorrelationId();
         log.warn("Validation exception [{}]: {}", correlationId, ex.getFieldErrors());
 
@@ -64,10 +73,195 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
+    // ==================== RESOURCE EXCEPTIONS ====================
+
+    @ExceptionHandler({ResourceNotFoundException.class, UserNotFoundException.class, 
+                      CourseNotFoundException.class, LessonNotFoundException.class, 
+                      OrderNotFoundException.class})
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleResourceNotFound(
+            BusinessException ex, WebRequest request) {
+        
+        String correlationId = generateCorrelationId();
+        log.warn("Resource not found [{}]: {}", correlationId, ex.getMessage());
+
+        Map<String, Object> details = new HashMap<>();
+        details.put("resource", extractResourceType(ex));
+        details.put("timestamp", Instant.now());
+
+        ApiResponse<Map<String, Object>> response = ApiResponse.<Map<String, Object>>builder()
+                .success(false)
+                .message(ex.getMessage())
+                .data(details)
+                .errorCode(ex.getErrorCode())
+                .correlationId(correlationId)
+                .timestamp(Instant.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler({DuplicateResourceException.class, DuplicateTransactionException.class, 
+                      EmailAlreadyExistsException.class})
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleDuplicateResource(
+            BusinessException ex, WebRequest request) {
+        
+        String correlationId = generateCorrelationId();
+        log.warn("Duplicate resource [{}]: {}", correlationId, ex.getMessage());
+
+        Map<String, Object> details = new HashMap<>();
+        details.put("conflictType", "DUPLICATE_RESOURCE");
+        details.put("timestamp", Instant.now());
+
+        ApiResponse<Map<String, Object>> response = ApiResponse.<Map<String, Object>>builder()
+                .success(false)
+                .message(ex.getMessage())
+                .data(details)
+                .errorCode(ex.getErrorCode())
+                .correlationId(correlationId)
+                .timestamp(Instant.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    // ==================== AUTHENTICATION EXCEPTIONS ====================
+
+    @ExceptionHandler({InvalidCredentialsException.class, TokenExpiredException.class, 
+                      TokenRevokedException.class, SessionExpiredException.class})
+    public ResponseEntity<ApiResponse<Void>> handleAuthenticationExceptions(
+            BusinessException ex, WebRequest request) {
+        
+        String correlationId = generateCorrelationId();
+        log.warn("Authentication exception [{}]: {}", correlationId, ex.getMessage());
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .success(false)
+                .message(ex.getMessage())
+                .errorCode(ex.getErrorCode())
+                .correlationId(correlationId)
+                .timestamp(Instant.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler({AccountDisabledException.class, InvalidUserStateException.class})
+    public ResponseEntity<ApiResponse<Void>> handleAccountStateExceptions(
+            BusinessException ex, WebRequest request) {
+        
+        String correlationId = generateCorrelationId();
+        log.warn("Account state exception [{}]: {}", correlationId, ex.getMessage());
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .success(false)
+                .message(ex.getMessage())
+                .errorCode(ex.getErrorCode())
+                .correlationId(correlationId)
+                .timestamp(Instant.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
+    // ==================== AUTHORIZATION EXCEPTIONS ====================
+
+    @ExceptionHandler({UnauthorizedAccessException.class, InsufficientPermissionException.class, 
+                      OrderAuthorizationException.class, CourseAccessDeniedException.class})
+    public ResponseEntity<ApiResponse<Void>> handleAuthorizationExceptions(
+            BusinessException ex, WebRequest request) {
+        
+        String correlationId = generateCorrelationId();
+        log.warn("Authorization exception [{}]: {}", correlationId, ex.getMessage());
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .success(false)
+                .message(ex.getMessage())
+                .errorCode(ex.getErrorCode())
+                .correlationId(correlationId)
+                .timestamp(Instant.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
+    // ==================== BUSINESS LOGIC EXCEPTIONS ====================
+
+    @ExceptionHandler({InvalidOrderStateException.class, InvalidCourseStateException.class, 
+                      CourseNotPublishedException.class, OperationNotAllowedException.class})
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleBusinessLogicExceptions(
+            BusinessException ex, WebRequest request) {
+        
+        String correlationId = generateCorrelationId();
+        log.warn("Business logic exception [{}]: {}", correlationId, ex.getMessage());
+
+        Map<String, Object> details = new HashMap<>();
+        details.put("violationType", "BUSINESS_RULE");
+        details.put("timestamp", Instant.now());
+
+        ApiResponse<Map<String, Object>> response = ApiResponse.<Map<String, Object>>builder()
+                .success(false)
+                .message(ex.getMessage())
+                .data(details)
+                .errorCode(ex.getErrorCode())
+                .correlationId(correlationId)
+                .timestamp(Instant.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    // ==================== PAYMENT EXCEPTIONS ====================
+
+    @ExceptionHandler({PaymentVerificationException.class, InvalidPaymentMethodException.class})
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handlePaymentExceptions(
+            BusinessException ex, WebRequest request) {
+        
+        String correlationId = generateCorrelationId();
+        log.warn("Payment exception [{}]: {}", correlationId, ex.getMessage());
+
+        Map<String, Object> details = new HashMap<>();
+        details.put("paymentIssue", true);
+        details.put("timestamp", Instant.now());
+
+        ApiResponse<Map<String, Object>> response = ApiResponse.<Map<String, Object>>builder()
+                .success(false)
+                .message(ex.getMessage())
+                .data(details)
+                .errorCode(ex.getErrorCode())
+                .correlationId(correlationId)
+                .timestamp(Instant.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    // ==================== SYSTEM EXCEPTIONS ====================
+
+    @ExceptionHandler({DatabaseException.class, ExternalServiceException.class, 
+                      SchedulerException.class})
+    public ResponseEntity<ApiResponse<Void>> handleSystemExceptions(
+            BusinessException ex, WebRequest request) {
+        
+        String correlationId = generateCorrelationId();
+        log.error("System exception [{}]: {}", correlationId, ex.getMessage(), ex);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .success(false)
+                .message("A system error occurred. Please try again later.")
+                .errorCode("SYSTEM_ERROR")
+                .correlationId(correlationId)
+                .timestamp(Instant.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // ==================== SPRING FRAMEWORK EXCEPTIONS ====================
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationErrors(
             MethodArgumentNotValidException ex, WebRequest request) {
-
+        
         String correlationId = generateCorrelationId();
         Map<String, String> errors = new HashMap<>();
 
@@ -94,7 +288,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleConstraintViolation(
             ConstraintViolationException ex, WebRequest request) {
-
+        
         String correlationId = generateCorrelationId();
         Map<String, String> violations = new HashMap<>();
 
@@ -116,10 +310,48 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex, WebRequest request) {
+        
+        String correlationId = generateCorrelationId();
+        log.warn("Data integrity violation [{}]: {}", correlationId, ex.getMessage());
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .success(false)
+                .message("Data integrity constraint violated")
+                .errorCode("DATA_INTEGRITY_ERROR")
+                .correlationId(correlationId)
+                .timestamp(Instant.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataAccessException(
+            DataAccessException ex, WebRequest request) {
+        
+        String correlationId = generateCorrelationId();
+        log.error("Database access error [{}]: {}", correlationId, ex.getMessage(), ex);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .success(false)
+                .message("Database access error occurred")
+                .errorCode("DATABASE_ERROR")
+                .correlationId(correlationId)
+                .timestamp(Instant.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // ==================== SECURITY EXCEPTIONS ====================
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(
             AccessDeniedException ex, WebRequest request) {
-
+        
         String correlationId = generateCorrelationId();
         log.warn("Access denied [{}]: {}", correlationId, ex.getMessage());
 
@@ -137,7 +369,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(
             BadCredentialsException ex, WebRequest request) {
-
+        
         String correlationId = generateCorrelationId();
         log.warn("Authentication failed [{}]: Bad credentials", correlationId);
 
@@ -152,12 +384,32 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(
+            AuthenticationException ex, WebRequest request) {
+        
+        String correlationId = generateCorrelationId();
+        log.warn("Authentication exception [{}]: {}", correlationId, ex.getMessage());
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .success(false)
+                .message("Authentication failed")
+                .errorCode("AUTHENTICATION_ERROR")
+                .correlationId(correlationId)
+                .timestamp(Instant.now())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
+
+    // ==================== TYPE MISMATCH EXCEPTIONS ====================
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(
             MethodArgumentTypeMismatchException ex, WebRequest request) {
-
+        
         String correlationId = generateCorrelationId();
-        String message = String.format("Invalid value '%s' for parameter '%s'",
+        String message = String.format("Invalid value '%s' for parameter '%s'", 
                 ex.getValue(), ex.getName());
 
         log.warn("Type mismatch [{}]: {}", correlationId, message);
@@ -173,10 +425,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
+    // ==================== GENERIC EXCEPTION HANDLER ====================
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(
             Exception ex, WebRequest request) {
-
+        
         String correlationId = generateCorrelationId();
         log.error("Unexpected error [{}]: {}", correlationId, ex.getMessage(), ex);
 
@@ -191,7 +445,18 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    // ==================== UTILITY METHODS ====================
+
     private String generateCorrelationId() {
         return UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    private String extractResourceType(BusinessException ex) {
+        String className = ex.getClass().getSimpleName();
+        if (className.contains("User")) return "USER";
+        if (className.contains("Course")) return "COURSE";
+        if (className.contains("Order")) return "ORDER";
+        if (className.contains("Lesson")) return "LESSON";
+        return "RESOURCE";
     }
 }
