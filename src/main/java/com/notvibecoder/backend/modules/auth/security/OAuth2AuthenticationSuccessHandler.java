@@ -91,13 +91,13 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
             // Build redirect URL with access token
             String redirectUrl = UriComponentsBuilder
-                    .fromUriString(appProperties.oauth2().redirectUri())
+                    .fromUriString(appProperties.getOauth2().getRedirectUri())
                     .queryParam("token", accessToken)
                     .build()
                     .toUriString();
 
             log.info("OAuth2 authentication successful for user: {}. Redirecting to: {}",
-                    principal.getEmail(), appProperties.oauth2().redirectUri());
+                    principal.getEmail(), appProperties.getOauth2().getRedirectUri());
 
             return redirectUrl;
 
@@ -112,7 +112,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
      */
     private String buildErrorRedirectUrl() {
         String errorUrl = UriComponentsBuilder
-                .fromUriString(appProperties.oauth2().redirectUri())
+                .fromUriString(appProperties.getOauth2().getRedirectUri())
                 .queryParam("error", "ProcessingError")
                 .build()
                 .toUriString();

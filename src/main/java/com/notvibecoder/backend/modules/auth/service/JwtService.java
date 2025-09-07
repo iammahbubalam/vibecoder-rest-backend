@@ -34,7 +34,7 @@ public class JwtService {
 
     @PostConstruct
     public void validateJwtConfiguration() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.secret());
+        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
 
         // Validate key strength
         Assert.isTrue(keyBytes.length >= 64,
@@ -102,7 +102,7 @@ public class JwtService {
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         String jwtId = UUID.randomUUID().toString();
         Date now = new Date();
-        Date expiration = new Date(now.getTime() + jwtProperties.accessToken().expirationMs());
+        Date expiration = new Date(now.getTime() + jwtProperties.getAccessToken().getExpirationMs());
 
         // Add security claims
         extraClaims.put("iat_timestamp", now.getTime());
@@ -188,7 +188,7 @@ public class JwtService {
     // ==================== PRIVATE HELPER METHODS ====================
 
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.secret());
+        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

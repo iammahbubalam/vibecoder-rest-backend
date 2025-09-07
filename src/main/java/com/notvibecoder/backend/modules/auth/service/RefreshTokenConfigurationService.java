@@ -13,10 +13,10 @@ public class RefreshTokenConfigurationService {
     private final JwtProperties jwtProperties;
 
     public Instant calculateExpiryDate() {
-        return Instant.now().plusMillis(jwtProperties.refreshToken().expirationMs());
+        return Instant.now().plusMillis(jwtProperties.getRefreshToken().getExpirationMs());
     }
 
     public long getExpirationTimeInSeconds() {
-        return jwtProperties.refreshToken().expirationMs() / 1000;
+        return jwtProperties.getRefreshToken().getExpirationMs() / 1000;
     }
 }

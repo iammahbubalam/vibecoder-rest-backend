@@ -28,7 +28,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.security.Principal;
 import java.util.List;
 
 /**
@@ -432,66 +431,6 @@ public class OrderController {
                     .body(ApiResponse.<Page<Order>>builder()
                             .success(false)
                             .message("Failed to search orders: " + e.getMessage())
-                            .build());
-        }
-    }
-
-    /**
-     * Get user's own orders with search capability
-     * GET /api/v1/orders/my-orders
-     */
-    @GetMapping("/my-orders")
-    @PreAuthorize(SecurityConstants.ORDER_VIEW_OWN)
-    public ResponseEntity<ApiResponse<Page<Order>>> getMyOrders(
-            @RequestParam(required = false) OrderStatus status,
-            @RequestParam(required = false) String courseId,
-            @RequestParam(required = false) String searchText,
-            @RequestParam(required = false) String dateFrom,
-            @RequestParam(required = false) String dateTo,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            Principal principal) {
-
-        String userId = principal.getName(); // Assuming principal name is user ID
-
-        log.info("User {} searching their orders with filters - status: {}, courseId: {}, searchText: {}, dateFrom: {}, dateTo: {}",
-                userId, status, courseId, searchText, dateFrom, dateTo);
-
-        // Validate pagination parameters
-        if (page < 0 || size <= 0 || size > 50) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.<Page<Order>>builder()
-                            .success(false)
-                            .message("Invalid pagination parameters")
-                            .build());
-        }
-
-        Pageable pageable = PageRequest.of(page, size,
-                org.springframework.data.domain.Sort.by(
-                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
-
-        try {
-            // Users can only search their own orders
-            Page<Order> orders = orderService.searchOrders(
-                    userId, courseId, status, null, // No payment method filter for users
-                    null, null, searchText, // No transaction ID or phone filter for users
-                    dateFrom, dateTo, pageable
-            );
-
-            return ResponseEntity.ok(
-                    ApiResponse.<Page<Order>>builder()
-                            .success(true)
-                            .message("Your orders retrieved successfully")
-                            .data(orders)
-                            .build()
-            );
-
-        } catch (Exception e) {
-            log.error("Error retrieving user orders for user {}: {}", userId, e.getMessage(), e);
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.<Page<Order>>builder()
-                            .success(false)
-                            .message("Failed to retrieve your orders: " + e.getMessage())
                             .build());
         }
     }

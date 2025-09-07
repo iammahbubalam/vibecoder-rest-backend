@@ -14,21 +14,26 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        String[] allowedOrigins = appProperties.getCors().getAllowedOrigins();
+        if (allowedOrigins == null || allowedOrigins.length == 0) {
+            allowedOrigins = new String[]{"http://localhost:3000"};
+        }
+        
         registry.addMapping("/api/**")
-                .allowedOrigins(appProperties.cors().allowedOrigins())
+                .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
 
         // Add CORS configuration for OAuth2 endpoints
         registry.addMapping("/oauth2/**")
-                .allowedOrigins(appProperties.cors().allowedOrigins())
+                .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
 
         registry.addMapping("/login/**")
-                .allowedOrigins(appProperties.cors().allowedOrigins())
+                .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);

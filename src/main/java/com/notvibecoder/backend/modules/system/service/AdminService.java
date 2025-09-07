@@ -29,7 +29,7 @@ public class AdminService {
             return false;
         }
 
-        String[] adminEmails = appProperties.admin().emails();
+        String[] adminEmails = appProperties.getAdmin().getEmails();
         log.debug("Checking email '{}' against admin emails: {}", email, String.join(", ", adminEmails));
 
         boolean isAdmin = Arrays.stream(adminEmails)
@@ -86,6 +86,6 @@ public class AdminService {
      * @return array of admin emails
      */
     public String[] getAdminEmails() {
-        return appProperties.admin().emails();
+        return appProperties.getAdmin().getEmails();
     }
 }
