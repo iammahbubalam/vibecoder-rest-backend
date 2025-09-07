@@ -68,7 +68,7 @@ public class CourseController {
     /**
      * Public course browsing - no authentication required
      */
-    @GetMapping("/")
+    @GetMapping()
     public ResponseEntity<ApiResponse<List<Course>>> getPublicCourses() {
         List<Course> courses = courseService.getPublishedCourses();
         return ResponseEntity.ok(ApiResponse.success("Public courses retrieved", courses));
