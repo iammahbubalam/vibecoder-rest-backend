@@ -37,7 +37,7 @@ public class UserAdminController {
         return ResponseEntity.ok(ApiResponse.success("User retrieved", userDto));
     }
 
-    @GetMapping
+    @GetMapping("/?page")
     public ResponseEntity<ApiResponse<List<UserResponseDto>>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
